@@ -11,8 +11,21 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":core"))
     implementation(project(":ui"))
     implementation(compose.desktop.currentOs)
+    implementation(libs.ktor.client.java)
+    implementation(libs.ktor.client.core)
+}
+
+// Runs the CLI from a source checkout, for example: gradlew.bat :desktopApp:cli --args="connect tiktok".
+// The installed `foursight` console command comes later in step 3.
+tasks.register<JavaExec>("cli") {
+    group = "application"
+    description = "Runs the FourSight command line."
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("io.github.rmac0001.foursight.desktop.MainKt")
+    standardInput = System.`in`
 }
 
 compose.desktop {
