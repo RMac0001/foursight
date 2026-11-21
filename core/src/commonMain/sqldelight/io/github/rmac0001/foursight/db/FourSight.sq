@@ -1,0 +1,179 @@
+-- FourSight local database (one per device). See docs/SPEC.md, "Sync through Google Drive".
+-- Snapshots and events are the only synced data; everything else here is either local state or
+-- rebuilt from them. Times are epoch milliseconds (UTC); days are ISO yyyy-mm-dd.
+
+CREATE TABLE setting (
+    key TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+-- One row per post on one platform (a TikTok, a Short, a Reel, an Instagram Reel).
+CREATE TABLE post (
+    platform TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    title TEXT,
+    published_at INTEGER NOT NULL,
+    url TEXT,
+    duration_seconds INTEGER,
+    content_type TEXT NOT NULL,
+    thumbnail_url TEXT,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (platform, post_id)
+);
+
+-- Raw API values as captured. item_kind is POST or ACCOUNT. capture_day is the capturing
+-- device's local date. The unique key makes merging the same file twice a no-op.
+CREATE TABLE snapshot (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    device_id TEXT NOT NULL,
+    platform TEXT NOT NULL,
+    item_kind TEXT NOT NULL,
+    item_id TEXT NOT NULL,
+    captured_at INTEGER NOT NULL,
+    capture_day TEXT NOT NULL,
+    definitions_version INTEGER NOT NULL,
+    raw_json TEXT NOT NULL,
+    UNIQUE (device_id, platform, item_kind, item_id, captured_at)
+);
+
+CREATE INDEX snapshot_item ON snapshot (platform, item_kind, item_id, captured_at);
+
+-- Normalized values parsed from raw_json. A NULL value means the platform returned nothing
+-- for that metric (missing), never zero.
+CREATE TABLE snapshot_value (
+    snapshot_id INTEGER NOT NULL REFERENCES snapshot (id) ON DELETE CASCADE,
+    metric TEXT NOT NULL,
+    value REAL,
+    PRIMARY KEY (snapshot_id, metric)
+);
+
+-- Append-only user edits (match confirmations, unlinks, notes). Losing events stay here.
+CREATE TABLE event (
+    event_id TEXT NOT NULL PRIMARY KEY,
+    device_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    payload_json TEXT NOT NULL
+);
+
+-- Per-platform connection state on this device (not synced).
+CREATE TABLE connection_status (
+    platform TEXT NOT NULL PRIMARY KEY,
+    last_success_at INTEGER,
+    last_attempt_at INTEGER,
+    last_error TEXT,
+    token_expires_at INTEGER
+);
+
+-- Drive files already merged, with the version seen, so unchanged files are skipped.
+CREATE TABLE synced_file (
+    path TEXT NOT NULL PRIMARY KEY,
+    version TEXT NOT NULL
+);
+
+-- settings
+
+getSetting:
+SELECT value FROM setting WHERE key = ?;
+
+putSetting:
+INSERT OR REPLACE INTO setting (key, value) VALUES (?, ?);
+
+-- posts
+
+insertPostIfMissing:
+INSERT OR IGNORE INTO post (platform, post_id, title, published_at, url, duration_seconds, content_type, thumbnail_url, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updatePost:
+UPDATE post SET title = ?, published_at = ?, url = ?, duration_seconds = ?, content_type = ?, thumbnail_url = ?, updated_at = ?
+WHERE platform = ? AND post_id = ?;
+
+allPosts:
+SELECT * FROM post ORDER BY published_at DESC;
+
+postsByPlatform:
+SELECT * FROM post WHERE platform = ? ORDER BY published_at DESC;
+
+getPost:
+SELECT * FROM post WHERE platform = ? AND post_id = ?;
+
+-- snapshots
+
+insertSnapshot:
+INSERT OR IGNORE INTO snapshot (device_id, platform, item_kind, item_id, captured_at, capture_day, definitions_version, raw_json)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+findSnapshotId:
+SELECT id FROM snapshot
+WHERE device_id = ? AND platform = ? AND item_kind = ? AND item_id = ? AND captured_at = ?;
+
+changes:
+SELECT changes();
+
+insertSnapshotValue:
+INSERT OR IGNORE INTO snapshot_value (snapshot_id, metric, value) VALUES (?, ?, ?);
+
+snapshotsForItem:
+SELECT * FROM snapshot
+WHERE platform = ? AND item_kind = ? AND item_id = ?
+ORDER BY captured_at ASC;
+
+-- For each day, the latest capture from any device wins.
+latestPerDayForItem:
+SELECT s.* FROM snapshot s
+WHERE s.platform = :platform AND s.item_kind = :itemKind AND s.item_id = :itemId
+  AND s.captured_at = (
+    SELECT MAX(t.captured_at) FROM snapshot t
+    WHERE t.platform = s.platform AND t.item_kind = s.item_kind AND t.item_id = s.item_id
+      AND t.capture_day = s.capture_day
+  )
+ORDER BY s.captured_at ASC;
+
+accountSnapshots:
+SELECT * FROM snapshot WHERE platform = ? AND item_kind = 'ACCOUNT' ORDER BY captured_at ASC;
+
+valuesForSnapshot:
+SELECT metric, value FROM snapshot_value WHERE snapshot_id = ?;
+
+snapshotsForDeviceDay:
+SELECT * FROM snapshot WHERE device_id = ? AND platform = ? AND capture_day = ? ORDER BY captured_at ASC;
+
+latestCaptureForPlatform:
+SELECT MAX(captured_at) FROM snapshot WHERE platform = ?;
+
+-- events
+
+insertEvent:
+INSERT OR IGNORE INTO event (event_id, device_id, created_at, type, payload_json) VALUES (?, ?, ?, ?, ?);
+
+allEvents:
+SELECT * FROM event ORDER BY created_at ASC, event_id ASC;
+
+eventsForDeviceDay:
+SELECT * FROM event WHERE device_id = ? AND created_at >= ? AND created_at < ? ORDER BY created_at ASC, event_id ASC;
+
+-- connection status
+
+ensureConnection:
+INSERT OR IGNORE INTO connection_status (platform) VALUES (?);
+
+setConnectionAttempt:
+UPDATE connection_status SET last_attempt_at = ?, last_error = ? WHERE platform = ?;
+
+markConnectionSuccess:
+UPDATE connection_status SET last_success_at = ?, last_error = NULL WHERE platform = ?;
+
+setTokenExpiry:
+UPDATE connection_status SET token_expires_at = ? WHERE platform = ?;
+
+allConnectionStatus:
+SELECT * FROM connection_status;
+
+-- sync bookkeeping
+
+syncedVersion:
+SELECT version FROM synced_file WHERE path = ?;
+
+markSynced:
+INSERT OR REPLACE INTO synced_file (path, version) VALUES (?, ?);
