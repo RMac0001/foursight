@@ -1,0 +1,23 @@
+# Gradle
+.gradle/
+build/
+.kotlin/
+local.properties
+
+# Secrets: client keys, tokens and signing material never go in the repo
+*.keystore
+*.jks
+client_secret*.json
+*.env
+secrets.properties
+
+# Local FourSight data
+*.db
+*.db-journal
+
+# Editors & OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
