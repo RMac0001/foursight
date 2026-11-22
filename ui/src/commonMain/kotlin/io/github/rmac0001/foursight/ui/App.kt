@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -32,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +64,9 @@ enum class Section(
     SETTINGS("Settings", "", "⚙"),
 }
 
+/** True on phones and narrow windows: screens stack instead of sitting side by side. */
+val LocalCompact = staticCompositionLocalOf { false }
+
 /**
  * Root composable shared by the Windows and Android apps. [services] is null where the app isn't
  * wired up yet (Android, until step 7).
@@ -77,51 +83,46 @@ fun App(services: AppServices? = null) {
             var selected by rememberSaveable { mutableStateOf(Section.OVERVIEW) }
             // Bumped after anything that changes data, so every screen reloads.
             var reload by remember { mutableIntStateOf(0) }
-            Column(Modifier.fillMaxSize()) {
-                HeaderBar()
-                Row(Modifier.fillMaxSize()) {
-                    NavPane(selected) { selected = it }
-                    VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-                        key(selected) {
-                            Column(
-                                Modifier
-                                    .widthIn(max = 1240.dp)
-                                    .fillMaxWidth()
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(horizontal = 32.dp, vertical = 24.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
-                            ) {
-                                val changed: () -> Unit = { reload += 1 }
-                                when (selected) {
-                                    Section.OVERVIEW -> {
-                                        OverviewScreen(services, reload)
-                                    }
-
-                                    Section.PLATFORMS -> {
-                                        PlatformsScreen(services, reload)
-                                    }
-
-                                    Section.CONTENT -> {
-                                        ContentScreen(services, reload, changed)
-                                    }
-
-                                    Section.POSTING -> {
-                                        PostingScreen()
-                                    }
-
-                                    Section.ACCOUNTS -> {
-                                        AccountsScreen(services, reload, changed)
-                                    }
-
-                                    Section.SETTINGS -> {
-                                        SettingsScreen(services, theme, {
-                                            theme = it
-                                            services.putSetting(ThemeChoice.KEY, it.name)
-                                        }, reload)
-                                    }
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                // Phones (and narrow windows) get a bottom tab bar instead of the side pane,
+                // as the Microsoft 365 phone apps do.
+                val compact = maxWidth < 720.dp
+                val changed: () -> Unit = { reload += 1 }
+                val content: @Composable () -> Unit = {
+                    CompositionLocalProvider(LocalCompact provides compact) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                            key(selected) {
+                                Column(
+                                    Modifier
+                                        .widthIn(max = 1240.dp)
+                                        .fillMaxWidth()
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(
+                                            horizontal = if (compact) 16.dp else 32.dp,
+                                            vertical = if (compact) 16.dp else 24.dp,
+                                        ),
+                                    verticalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 16.dp),
+                                ) {
+                                    SectionContent(selected, services, reload, changed, theme) { theme = it }
                                 }
                             }
+                        }
+                    }
+                }
+                if (compact) {
+                    Column(Modifier.fillMaxSize()) {
+                        HeaderBar(compact = true)
+                        Box(Modifier.weight(1f)) { content() }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        BottomTabs(selected) { selected = it }
+                    }
+                } else {
+                    Column(Modifier.fillMaxSize()) {
+                        HeaderBar(compact = false)
+                        Row(Modifier.fillMaxSize()) {
+                            NavPane(selected) { selected = it }
+                            VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            content()
                         }
                     }
                 }
@@ -130,9 +131,85 @@ fun App(services: AppServices? = null) {
     }
 }
 
+@Composable
+private fun SectionContent(
+    selected: Section,
+    services: AppServices,
+    reload: Int,
+    changed: () -> Unit,
+    theme: ThemeChoice,
+    onTheme: (ThemeChoice) -> Unit,
+) {
+    when (selected) {
+        Section.OVERVIEW -> {
+            OverviewScreen(services, reload)
+        }
+
+        Section.PLATFORMS -> {
+            PlatformsScreen(services, reload)
+        }
+
+        Section.CONTENT -> {
+            ContentScreen(services, reload, changed)
+        }
+
+        Section.POSTING -> {
+            PostingScreen()
+        }
+
+        Section.ACCOUNTS -> {
+            AccountsScreen(services, reload, changed)
+        }
+
+        Section.SETTINGS -> {
+            SettingsScreen(services, theme, {
+                onTheme(it)
+                services.putSetting(ThemeChoice.KEY, it.name)
+            }, reload)
+        }
+    }
+}
+
+/** The phone layout's bottom tab bar: icon over a short label, the selected tab in the brand orange. */
+@Composable
+private fun BottomTabs(
+    selected: Section,
+    onSelect: (Section) -> Unit,
+) {
+    val fonts = LocalBrandFonts.current
+    val colors = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth().background(colors.surface).padding(vertical = 6.dp)) {
+        Section.entries.forEach { s ->
+            val on = s == selected
+            Column(
+                Modifier.weight(1f).clickable { onSelect(s) }.padding(vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    if (fonts.icons != null) s.icon else s.fallback,
+                    color = if (on) colors.primary else colors.onSurfaceVariant,
+                    style =
+                        if (fonts.icons != null) {
+                            TextStyle(fontFamily = fonts.icons, fontSize = 18.sp)
+                        } else {
+                            MaterialTheme.typography.titleMedium
+                        },
+                )
+                Text(
+                    s.title,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (on) colors.primary else colors.onSurfaceVariant,
+                    fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
 /** The Microsoft 365-style app bar, in the brand's dark brown, with the sunset mark and wordmark. */
 @Composable
-private fun HeaderBar() {
+private fun HeaderBar(compact: Boolean) {
     val fonts = LocalBrandFonts.current
     Row(
         Modifier
@@ -154,12 +231,16 @@ private fun HeaderBar() {
                     MaterialTheme.typography.titleLarge
                 },
         )
-        Spacer(Modifier.width(12.dp))
-        Text(
-            "One Fat Man's Journey",
-            color = Brand.Cream.copy(alpha = 0.7f),
-            style = MaterialTheme.typography.bodySmall,
-        )
+        if (!compact) {
+            Spacer(Modifier.width(12.dp))
+        }
+        if (!compact) {
+            Text(
+                "One Fat Man's Journey",
+                color = Brand.Cream.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
     }
 }
 
