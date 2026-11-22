@@ -10,7 +10,7 @@ step forward.
 | --- | --- |
 | 1. Setup (developer apps) | Done by Roger, November 21, 2026 (details in the vault spec's Setup status) |
 | 2. Core | Built and tested on branch `claude/step-2-core` (see below) |
-| 3. Collectors | In progress: TikTok, YouTube, Facebook and Drive publish verified live; Instagram waits on the linked account |
+| 3. Collectors | Done except Instagram's live check (no Reels on the linked account yet): TikTok, YouTube, Facebook, Drive publish, installed command and daily schedule verified live |
 | 4. CLI and MCP | Not started |
 | 5. Obsidian writer | Not started |
 | 6. Windows UI | Not started (placeholder shell with the six sections) |
@@ -108,8 +108,18 @@ step forward.
   Reels, so the collector found none. Waiting on Roger to link the professional account he posts
   Reels to. `ig_reels_avg_watch_time` is assumed to be milliseconds, like Facebook's; confirm on the
   first run with Reels.
-- **Not yet:** the installed `foursight` console command and the Task Scheduler commands for Roger
-  to run.
+- **Installed command and schedule** (verified live November 22, 2026): `scripts/install-windows.ps1`
+  builds the app plus a jlinked Java runtime for the command (the app image's runtime has no java.exe
+  or javaw.exe), installs to `%USERPROFILE%\FourSightpp`, writes `binoursight.cmd`, adds `bin` to
+  the user PATH, and registers two per-user tasks under `\FourSight\` in Task Scheduler: "Daily
+  collection" at 6:00 AM and "Day-7 check" every hour (`collect --day7-due`). Both run windowless
+  (javaw with `--log`), only while Roger is signed in, and catch up after the PC was off. Logs go to
+  `%USERPROFILE%\FourSight\logs`. `scripts/uninstall-windows.ps1` removes it all and keeps the data.
+- **Why not AppData:** the Claude desktop app is a packaged app, and Windows redirects its writes to
+  `%LOCALAPPDATA%` into a private copy (`AppData\Local\Packages\Claude_...\LocalCache`) that Task
+  Scheduler and other programs can't see. The first install landed there and every task failed with
+  0x80070002. The database moved with it, to `%USERPROFILE%\FourSightoursight.db` (Roger's
+  decision), so the CLI, the scheduled runs and the future MCP server all share one database.
 - **Tests:** JVM tests for the TikTok, YouTube, Facebook and Instagram clients, auth and collectors
   against doc-shaped fixtures, and the runner.
 

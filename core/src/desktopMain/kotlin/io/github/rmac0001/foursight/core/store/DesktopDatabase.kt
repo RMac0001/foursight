@@ -31,13 +31,16 @@ object DesktopDatabase {
     }
 
     /**
-     * Default location on Windows: %LOCALAPPDATA%\FourSight\foursight.db. Elsewhere (developer
+     * Default location on Windows: %USERPROFILE%\FourSight\foursight.db (Roger's decision, November
+     * 22, 2026). Not under AppData: Windows redirects a packaged app's AppData writes (the Claude
+     * desktop app, which will start the MCP server) into a private copy that Task Scheduler and other
+     * programs can't see, which would split FourSight into two databases. Elsewhere (developer
      * machines, CI) it falls back to ~/.foursight/foursight.db.
      */
     fun defaultPath(): Path {
-        val localAppData = System.getenv("LOCALAPPDATA")
-        return if (localAppData != null) {
-            Path.of(localAppData, "FourSight", "foursight.db")
+        val profile = System.getenv("USERPROFILE")
+        return if (profile != null && System.getProperty("os.name").startsWith("Windows")) {
+            Path.of(profile, "FourSight", "foursight.db")
         } else {
             Path.of(System.getProperty("user.home"), ".foursight", "foursight.db")
         }
