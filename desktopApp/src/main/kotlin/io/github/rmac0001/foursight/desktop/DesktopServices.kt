@@ -15,6 +15,7 @@ import io.github.rmac0001.foursight.core.platform.tiktok.TikTokAuth
 import io.github.rmac0001.foursight.core.platform.tiktok.TikTokCollector
 import io.github.rmac0001.foursight.core.platform.youtube.YouTubeApi
 import io.github.rmac0001.foursight.core.platform.youtube.YouTubeCollector
+import io.github.rmac0001.foursight.core.query.QueryService
 import io.github.rmac0001.foursight.core.secrets.SecretStore
 import io.github.rmac0001.foursight.core.secrets.WindowsCredentialStore
 import io.github.rmac0001.foursight.core.store.DesktopDatabase
@@ -28,8 +29,14 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlin.time.Clock
 
-/** Wires the core services for the Windows app and CLI. One instance per process. */
-class DesktopServices : AutoCloseable {
+/**
+ * Wires the core services for the Windows app, CLI and MCP server. One instance per process. Tests
+ * pass an in-memory [repo] and secret store.
+ */
+class DesktopServices(
+    val repo: Repository = Repository(DesktopDatabase.open(DesktopDatabase.defaultPath())),
+    val secrets: SecretStore = WindowsCredentialStore(),
+) : AutoCloseable {
     val http =
         HttpClient(Java) {
             install(HttpTimeout) {
@@ -38,8 +45,7 @@ class DesktopServices : AutoCloseable {
             }
             // No logging plugin: request logs would contain tokens.
         }
-    val secrets: SecretStore = WindowsCredentialStore()
-    val repo = Repository(DesktopDatabase.open(DesktopDatabase.defaultPath()))
+    val queries = QueryService(repo)
     val timeZone = TimeZone.currentSystemDefault()
 
     private val tiktokApi = TikTokApi(http)
@@ -61,8 +67,10 @@ class DesktopServices : AutoCloseable {
     val signInFlows: Map<String, SignInFlow> =
         listOf(tiktokAuth, youtubeAuth, driveAuth, metaAuth).associateBy { it.connection }
 
-    private val sync = SyncEngine(DriveSyncStore(http, { driveAuth.accessToken(Clock.System.now()) }), repo, timeZone)
+    val sync = SyncEngine(DriveSyncStore(http, { driveAuth.accessToken(Clock.System.now()) }), repo, timeZone)
     private var deviceRegistered = false
+
+    val driveConnected: Boolean get() = driveAuth.isConnected
 
     /**
      * After a platform is stored, publish this device's snapshot file for the day to Drive (spec:

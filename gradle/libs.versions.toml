@@ -17,6 +17,10 @@ ktor = "3.6.1"
 sqldelight = "2.4.1"
 jna = "5.19.1"
 ktlint = "1.8.0"
+# Official Kotlin MCP SDK; checked on Maven Central November 22, 2026.
+mcp-kotlin = "0.16.0"
+# Matches the slf4j-api the MCP SDK brings in; silences its "no provider" warning (FourSight logs nothing).
+slf4j = "2.0.19"
 
 [libraries]
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose-multiplatform" }
@@ -34,6 +38,8 @@ ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
 ktor-client-mock ={ module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+mcp-kotlin-server = { module = "io.modelcontextprotocol:kotlin-sdk-server", version.ref = "mcp-kotlin" }
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 
 [plugins]

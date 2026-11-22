@@ -16,6 +16,8 @@ import kotlin.time.Clock
  * CLI never prints tokens or secrets, so the log holds none.
  */
 fun main(args: Array<String>) {
+    // kotlin-logging (from the MCP SDK) prints a startup line to stdout unless told not to.
+    System.setProperty("kotlin-logging.logStartupMessage", "false")
     if (args.isNotEmpty()) {
         val list = args.toMutableList()
         val logAt = list.indexOf("--log")
