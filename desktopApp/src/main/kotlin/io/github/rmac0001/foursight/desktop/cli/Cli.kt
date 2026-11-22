@@ -48,16 +48,17 @@ class Cli(
         services: DesktopServices,
         args: List<String>,
     ): Int {
-        val platform = args.singleOrNull()?.let(::parsePlatform) ?: return usage(2)
+        val name = args.singleOrNull()?.lowercase() ?: return usage(2)
         val flow =
-            services.signInFlows[platform] ?: run {
-                err.println("Signing in to ${platform.displayName} isn't built yet.")
+            services.signInFlows[name] ?: run {
+                val known = services.signInFlows.keys.joinToString()
+                err.println("Can't sign in to \"$name\" yet. Available: $known")
                 return 1
             }
-        return LoopbackReceiver().use { receiver ->
+        return LoopbackReceiver(flow.loopbackPath).use { receiver ->
             try {
                 val request = flow.begin(receiver.redirectUri)
-                out.println("Opening ${platform.displayName} sign-in in your browser...")
+                out.println("Opening ${flow.displayName} sign-in in your browser...")
                 val opened =
                     runCatching {
                         Desktop.isDesktopSupported() &&
@@ -68,9 +69,9 @@ class Cli(
                 out.println("Waiting for the sign-in to finish (up to 5 minutes)...")
                 val callback = runBlocking { receiver.await(5.minutes) }
                 val result = runBlocking { flow.complete(request, callback, Clock.System.now()) }
-                services.repo.setTokenExpiry(platform, result.signInExpiresAt)
+                flow.platform?.let { services.repo.setTokenExpiry(it, result.signInExpiresAt) }
                 out.println(
-                    "Signed in to ${platform.displayName}. Granted: ${result.grantedScopes.sorted().joinToString()}",
+                    "Signed in to ${flow.displayName}. Granted: ${result.grantedScopes.sorted().joinToString()}",
                 )
                 if (result.missingScopes.isNotEmpty()) {
                     err.println(
@@ -151,7 +152,7 @@ class Cli(
         (if (code == 0) out else err).println(
             """
             Usage:
-              foursight connect <platform>             Sign in (opens the browser)
+              foursight connect <name>                 Sign in (opens the browser): tiktok, youtube, drive
               foursight collect [--platform <name>]    Collect today's numbers
               foursight collect --day7-due             Collect only platforms with a post due for day 7
             Platforms: tiktok, youtube, facebook, instagram

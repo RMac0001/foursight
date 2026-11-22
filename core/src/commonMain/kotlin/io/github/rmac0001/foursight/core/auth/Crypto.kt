@@ -1,5 +1,7 @@
 package io.github.rmac0001.foursight.core.auth
 
+import kotlin.io.encoding.Base64
+
 /** SHA-256 of [input]. Both targets are JVMs, so both actuals use java.security.MessageDigest. */
 internal expect fun sha256(input: ByteArray): ByteArray
 
@@ -21,6 +23,12 @@ object Pkce {
      * Login Kit for Desktop: "You must use hex encoding of SHA256 to generate the code challenge."
      */
     fun tiktokChallenge(verifier: String): String = sha256(verifier.encodeToByteArray()).toHex()
+
+    /** RFC 7636 S256: base64url without padding of SHA-256(verifier). Used by Google. */
+    fun s256Challenge(verifier: String): String =
+        Base64.UrlSafe
+            .withPadding(Base64.PaddingOption.ABSENT)
+            .encode(sha256(verifier.encodeToByteArray()))
 
     private fun randomString(
         length: Int,

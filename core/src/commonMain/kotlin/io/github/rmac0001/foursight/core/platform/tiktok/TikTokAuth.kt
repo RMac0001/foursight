@@ -34,6 +34,9 @@ class TikTokAuth(
     private val secrets: SecretStore,
 ) : SignInFlow {
     override val platform = SocialPlatform.TIKTOK
+    override val connection = "tiktok"
+    override val displayName = "TikTok"
+    override val loopbackPath = "/callback/"
 
     override fun begin(redirectUri: String): SignInRequest {
         val (clientKey, _) = clientKeys()
@@ -47,7 +50,7 @@ class TikTokAuth(
                 state = state,
                 codeChallenge = Pkce.tiktokChallenge(verifier),
             )
-        return SignInRequest(platform, url, redirectUri, state, verifier)
+        return SignInRequest(connection, url, redirectUri, state, verifier)
     }
 
     override suspend fun complete(
@@ -67,7 +70,7 @@ class TikTokAuth(
         val tokens = api.exchangeCode(clientKey, clientSecret, code, request.redirectUri, request.verifier)
         secrets.write(SecretName.TIKTOK_REFRESH_TOKEN, tokens.refreshToken)
         return SignInResult(
-            platform = platform,
+            connection = connection,
             grantedScopes = tokens.scopes,
             missingScopes = TikTokApi.READ_SCOPES.toSet() - tokens.scopes,
             signInExpiresAt = now + tokens.refreshExpiresInSeconds.seconds,
@@ -78,7 +81,7 @@ class TikTokAuth(
     suspend fun accessToken(now: Instant): AccessToken {
         val refreshToken =
             secrets.read(SecretName.TIKTOK_REFRESH_TOKEN)?.takeIf { it.isNotEmpty() }
-                ?: throw CollectionException(platform, FailureKind.NOT_CONNECTED, "not signed in")
+                ?: throw CollectionException(SocialPlatform.TIKTOK, FailureKind.NOT_CONNECTED, "not signed in")
         val (clientKey, clientSecret) = clientKeys()
         val tokens = api.refresh(clientKey, clientSecret, refreshToken)
         // Write first: the old refresh token is already invalid.
@@ -101,7 +104,7 @@ class TikTokAuth(
                     SecretName.TIKTOK_CLIENT_SECRET.target.takeIf { secret.isNullOrEmpty() },
                 )
             throw CollectionException(
-                platform,
+                SocialPlatform.TIKTOK,
                 FailureKind.MISSING_CLIENT_KEYS,
                 "missing Credential Manager entries: ${missing.joinToString()}",
             )

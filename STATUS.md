@@ -10,7 +10,7 @@ step forward.
 | --- | --- |
 | 1. Setup (developer apps) | Done by Roger, November 21, 2026 (details in the vault spec's Setup status) |
 | 2. Core | Built and tested on branch `claude/step-2-core` (see below) |
-| 3. Collectors | In progress on branch `claude/step-3-collectors`: TikTok built and verified live |
+| 3. Collectors | In progress: TikTok, YouTube and Drive publish verified live; Facebook and Instagram next |
 | 4. CLI and MCP | Not started |
 | 5. Obsidian writer | Not started |
 | 6. Windows UI | Not started (placeholder shell with the six sections) |
@@ -77,10 +77,27 @@ step forward.
   platforms with a post in the day-7 window that has no capture there yet (the extra run near day 7).
 - **CLI so far:** `foursight connect <platform>` and `foursight collect [--platform x] [--day7-due]`.
   From a checkout: `gradlew.bat :desktopApp:cli --args="connect tiktok"`.
-- **Not yet:** the YouTube, Facebook and Instagram collectors; Drive publishing after collection
-  (needs the Google sign-in); the installed `foursight` console command and the Task Scheduler
-  commands for Roger to run.
-- **Tests:** 57 JVM tests (TikTok client, auth and collector against doc-shaped fixtures; runner).
+- **YouTube** (verified live November 22, 2026): Google sign-in for the Desktop client (loopback
+  `http://127.0.0.1:<port>`, PKCE S256, `access_type=offline`, `prompt=consent`). Two separate
+  sign-ins, `connect youtube` (`youtube.readonly`, `yt-analytics.readonly`) and `connect drive`
+  (`drive.file`): Google answers a request for both with `invalid_request`, "scopes that cannot be
+  requested together". Public videos from the uploads
+  playlist. Views, likes and comments from the Data API's current counters (Roger's decision);
+  shares, subscribers gained, watch time, average view duration and average percentage viewed from
+  Analytics, with the last Analytics day kept as `analytics_through`. An Analytics failure leaves
+  those missing with a warning and keeps the rest. Definitions version 2.
+- **Drive publish** (verified live November 22, 2026): after each platform is stored, this
+  device's snapshot file for the day is written to Drive, once the Drive sign-in exists. The first
+  run created the `FourSight` folder, `snapshots/` and `devices/`.
+- **Confirmed on the first YouTube run:** `privacyStatus` comes back as `public`; the Top videos
+  report accepts `averageViewPercentage` and `engagedViews` with a video filter; Analytics ran
+  three days behind (`analytics_through` 2026-11-19 on November 22), and the newest video had no
+  Analytics row yet, so its Analytics numbers are missing rather than zero. Still unconfirmed: 50
+  ids per `videos.list` call (the channel has fewer than 50 public videos).
+- **Not yet:** the Facebook and Instagram collectors; the installed `foursight` console command and
+  the Task Scheduler commands for Roger to run.
+- **Tests:** 64 JVM tests (TikTok and YouTube clients, auth and collectors against doc-shaped
+  fixtures; runner).
 
 ## To verify live
 

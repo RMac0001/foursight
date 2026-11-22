@@ -53,7 +53,7 @@ data class MetricDefinition(
  * API reference on November 21, 2026 (see STATUS.md, "API details checked").
  */
 object Metrics {
-    const val DEFINITIONS_VERSION = 1
+    const val DEFINITIONS_VERSION = 2
 
     private fun available(source: String) = Availability.Available(source)
 
@@ -72,7 +72,7 @@ object Metrics {
             sources =
                 mapOf(
                     TIKTOK to available("video.view_count (Display API /v2/video/query/)"),
-                    YOUTUBE to available("views (YouTube Analytics API)"),
+                    YOUTUBE to available("statistics.viewCount (YouTube Data API, current counter)"),
                     FACEBOOK to available("fb_reels_total_plays (video_insights, lifetime, includes replays)"),
                     INSTAGRAM to available("views (IG Media insights)"),
                 ),
@@ -89,7 +89,7 @@ object Metrics {
             sources =
                 mapOf(
                     TIKTOK to available("video.like_count"),
-                    YOUTUBE to available("likes (YouTube Analytics API)"),
+                    YOUTUBE to available("statistics.likeCount (YouTube Data API, current counter)"),
                     FACEBOOK to available("post_video_likes_by_reaction_type (summed over reaction types)"),
                     INSTAGRAM to available("likes (IG Media insights)"),
                 ),
@@ -106,7 +106,7 @@ object Metrics {
             sources =
                 mapOf(
                     TIKTOK to available("video.comment_count"),
-                    YOUTUBE to available("comments (YouTube Analytics API)"),
+                    YOUTUBE to available("statistics.commentCount (YouTube Data API, current counter)"),
                     FACEBOOK to available("post_video_social_actions (comments part)"),
                     INSTAGRAM to available("comments (IG Media insights)"),
                 ),
@@ -123,7 +123,7 @@ object Metrics {
             sources =
                 mapOf(
                     TIKTOK to available("video.share_count"),
-                    YOUTUBE to available("shares (YouTube Analytics API)"),
+                    YOUTUBE to available("shares (YouTube Analytics API, lifetime through analytics_through)"),
                     FACEBOOK to available("post_video_social_actions (shares part)"),
                     INSTAGRAM to available("shares (IG Media insights)"),
                 ),
@@ -159,7 +159,11 @@ object Metrics {
             sources =
                 mapOf(
                     TIKTOK to unavailable("TikTok's Display API reports only the account's total follower count."),
-                    YOUTUBE to available("subscribersGained (YouTube Analytics API, filtered to the video)"),
+                    YOUTUBE to
+                        available(
+                            "subscribersGained (YouTube Analytics API, video filter: subscriptions from the " +
+                                "video's watch page only; lifetime through analytics_through)",
+                        ),
                     FACEBOOK to available("post_video_followers (video_insights, lifetime)"),
                     INSTAGRAM to
                         unavailable("Instagram's per-media follows metric covers feed posts and stories, not Reels."),
@@ -194,7 +198,8 @@ object Metrics {
             sources =
                 mapOf(
                     TIKTOK to unavailable("Not available for TikTok Personal accounts through the Display API."),
-                    YOUTUBE to available("estimatedMinutesWatched (converted to seconds)"),
+                    YOUTUBE to
+                        available("estimatedMinutesWatched x 60 (YouTube Analytics API, through analytics_through)"),
                     FACEBOOK to available("post_video_view_time (milliseconds, includes replays)"),
                     INSTAGRAM to available("ig_reels_video_view_total_time (includes replays; metric in development)"),
                 ),
@@ -212,7 +217,7 @@ object Metrics {
             sources =
                 mapOf(
                     TIKTOK to unavailable("Not available for TikTok Personal accounts through the Display API."),
-                    YOUTUBE to available("averageViewDuration"),
+                    YOUTUBE to available("averageViewDuration (YouTube Analytics API, through analytics_through)"),
                     FACEBOOK to available("post_video_avg_time_watched (milliseconds, includes replays)"),
                     INSTAGRAM to available("ig_reels_avg_watch_time"),
                 ),
@@ -229,7 +234,7 @@ object Metrics {
             sources =
                 mapOf(
                     TIKTOK to unavailable("Not available for TikTok Personal accounts through the Display API."),
-                    YOUTUBE to available("averageViewPercentage"),
+                    YOUTUBE to available("averageViewPercentage (YouTube Analytics API, through analytics_through)"),
                     FACEBOOK to unavailable("Facebook reports a retention graph instead (post_video_retention_graph)."),
                     INSTAGRAM to unavailable("Not in IG Media insights."),
                 ),

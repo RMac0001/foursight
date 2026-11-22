@@ -8,18 +8,18 @@ import kotlin.time.Instant
  * never stored or printed; [authorizeUrl] is what the browser opens.
  */
 class SignInRequest(
-    val platform: SocialPlatform,
+    val connection: String,
     val authorizeUrl: String,
     val redirectUri: String,
     internal val state: String,
     internal val verifier: String,
 ) {
-    override fun toString() = "SignInRequest(platform=$platform, redirectUri=$redirectUri)"
+    override fun toString() = "SignInRequest(connection=$connection, redirectUri=$redirectUri)"
 }
 
 /** The outcome of a finished sign-in. Tokens are already in the [SecretStore]; none are here. */
 data class SignInResult(
-    val platform: SocialPlatform,
+    val connection: String,
     val grantedScopes: Set<String>,
     val missingScopes: Set<String>,
     /** When the stored refresh token expires, so a new sign-in is needed. */
@@ -31,7 +31,19 @@ data class SignInResult(
  * Android App Link) receives the callback and passes its query parameters to [complete].
  */
 interface SignInFlow {
-    val platform: SocialPlatform
+    /** The name used on the command line: `tiktok`, `youtube`, `drive`. */
+    val connection: String
+
+    val displayName: String
+
+    /** The platform whose connection status this sign-in updates; null for Drive sync. */
+    val platform: SocialPlatform?
+
+    /**
+     * The path the desktop loopback listener serves: TikTok's registered redirect ends in
+     * `/callback/`; Google's loopback redirect is the bare `http://127.0.0.1:<port>` (path `/`).
+     */
+    val loopbackPath: String
 
     /** [redirectUri] is the exact callback URL the shell is listening on. */
     fun begin(redirectUri: String): SignInRequest
