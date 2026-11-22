@@ -72,7 +72,7 @@ foursight/
 - **Sign-in:**
   - Windows: loopback redirect. TikTok's desktop rules allow only `localhost` or `127.0.0.1`, require a port, support a wildcard port, and require PKCE. Register `http://127.0.0.1:*/callback/`. Google also accepts loopback redirects, and Meta allows `http://localhost` automatically in development mode.
   - Android: TikTok requires an App Link or deep link. Google uses its Android OAuth client. Meta uses its official Facebook Android SDK.
-- **Google Drive access:** the Drive REST API (v3) through Ktor, from `commonMain`, on both platforms, using the same Google sign-in as YouTube (one consent covers both). Scope `drive.file` only: it's non-sensitive and lets FourSight see just the files it creates, never the rest of Roger's Drive. Don't rely on the Google Drive for desktop sync folder. Drive sits behind a `SyncStore` interface so another provider can be swapped in with one new adapter (Roger may consolidate his cloud storage).
+- **Google Drive access:** the Drive REST API (v3) through Ktor, from `commonMain`, on both platforms, using the same Google project and OAuth client as YouTube but its own sign-in: Google refuses YouTube and Drive scopes in one consent (found November 22, 2026), so each device signs in to Google twice, once for YouTube and once for Drive. Scope `drive.file` only: it's non-sensitive and lets FourSight see just the files it creates, never the rest of Roger's Drive. Don't rely on the Google Drive for desktop sync folder. Drive sits behind a `SyncStore` interface so another provider can be swapped in with one new adapter (Roger may consolidate his cloud storage).
 - **Daily collection:** Windows Task Scheduler runs `foursight collect` once a day. Android uses WorkManager periodic work (Doze may delay it, which is fine for a daily snapshot). Each platform is collected independently: one failing never blocks the others.
 
 ## Sync through Google Drive
@@ -98,7 +98,7 @@ Google Drive: /FourSight/
 ## Features (all in v1)
 
 ### Accounts
-- Connect TikTok, YouTube, the Facebook Page and Instagram. Google Drive sync rides on the same Google sign-in as YouTube.
+- Connect TikTok, YouTube, the Facebook Page and Instagram. Google Drive sync has its own Google sign-in (Google won't grant YouTube and Drive in one consent).
 - Per connection: status, last successful refresh, last attempt, last error, token expiry, and the API limits that apply.
 
 ### Content library

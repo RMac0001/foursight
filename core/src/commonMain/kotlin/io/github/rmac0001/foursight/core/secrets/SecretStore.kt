@@ -29,7 +29,10 @@ enum class SecretName(
     TIKTOK_REFRESH_TOKEN("FourSight/tiktok/refresh_token", enteredByRoger = false),
     GOOGLE_CLIENT_ID("FourSight/google/client_id", enteredByRoger = true),
     GOOGLE_CLIENT_SECRET("FourSight/google/client_secret", enteredByRoger = true),
-    GOOGLE_REFRESH_TOKEN("FourSight/google/refresh_token", enteredByRoger = false),
+
+    // Google refuses YouTube and Drive scopes in one consent, so each has its own sign-in and token.
+    GOOGLE_YOUTUBE_REFRESH_TOKEN("FourSight/google/youtube_refresh_token", enteredByRoger = false),
+    GOOGLE_DRIVE_REFRESH_TOKEN("FourSight/google/drive_refresh_token", enteredByRoger = false),
     META_APP_ID("FourSight/meta/app_id", enteredByRoger = true),
     META_APP_SECRET("FourSight/meta/app_secret", enteredByRoger = true),
     META_USER_TOKEN("FourSight/meta/user_token", enteredByRoger = false),

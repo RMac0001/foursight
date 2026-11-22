@@ -5,6 +5,7 @@ import io.github.rmac0001.foursight.core.auth.SignInFlow
 import io.github.rmac0001.foursight.core.collect.CollectionRunner
 import io.github.rmac0001.foursight.core.collect.PlatformCollector
 import io.github.rmac0001.foursight.core.platform.google.GoogleAuth
+import io.github.rmac0001.foursight.core.platform.google.GoogleGrant
 import io.github.rmac0001.foursight.core.platform.tiktok.TikTokApi
 import io.github.rmac0001.foursight.core.platform.tiktok.TikTokAuth
 import io.github.rmac0001.foursight.core.platform.tiktok.TikTokCollector
@@ -39,29 +40,31 @@ class DesktopServices : AutoCloseable {
 
     private val tiktokApi = TikTokApi(http)
     private val tiktokAuth = TikTokAuth(tiktokApi, secrets)
-    private val googleAuth = GoogleAuth(http, secrets)
+    private val youtubeAuth = GoogleAuth(http, secrets, GoogleGrant.YOUTUBE)
+    private val driveAuth = GoogleAuth(http, secrets, GoogleGrant.DRIVE)
 
     val collectors: List<PlatformCollector> =
         listOf(
             TikTokCollector(tiktokApi, tiktokAuth),
-            YouTubeCollector(YouTubeApi(http), googleAuth),
+            YouTubeCollector(YouTubeApi(http), youtubeAuth),
         )
 
-    val signInFlows: Map<SocialPlatform, SignInFlow> =
-        mapOf(SocialPlatform.TIKTOK to tiktokAuth, SocialPlatform.YOUTUBE to googleAuth)
+    /** Sign-ins by command-line name. Drive sync is its own Google sign-in. */
+    val signInFlows: Map<String, SignInFlow> =
+        listOf(tiktokAuth, youtubeAuth, driveAuth).associateBy { it.connection }
 
-    private val sync = SyncEngine(DriveSyncStore(http, { googleAuth.accessToken(Clock.System.now()) }), repo, timeZone)
+    private val sync = SyncEngine(DriveSyncStore(http, { driveAuth.accessToken(Clock.System.now()) }), repo, timeZone)
     private var deviceRegistered = false
 
     /**
      * After a platform is stored, publish this device's snapshot file for the day to Drive (spec:
-     * Sync). Needs the Google sign-in; without it, data stays local until Google is connected.
+     * Sync). Needs the Drive sign-in; without it, data stays local until Drive is connected.
      */
     private suspend fun publish(
         platform: SocialPlatform,
         day: LocalDate,
     ) {
-        if (!googleAuth.isConnected) return
+        if (!driveAuth.isConnected) return
         if (!deviceRegistered) {
             sync.registerDevice(System.getenv("COMPUTERNAME") ?: "Windows PC", "windows", Clock.System.now())
             deviceRegistered = true

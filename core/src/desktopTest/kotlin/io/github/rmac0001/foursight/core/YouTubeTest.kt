@@ -6,6 +6,7 @@ import io.github.rmac0001.foursight.core.collect.FailureKind
 import io.github.rmac0001.foursight.core.model.ContentType
 import io.github.rmac0001.foursight.core.model.ItemKind
 import io.github.rmac0001.foursight.core.platform.google.GoogleAuth
+import io.github.rmac0001.foursight.core.platform.google.GoogleGrant
 import io.github.rmac0001.foursight.core.platform.youtube.YouTubeApi
 import io.github.rmac0001.foursight.core.platform.youtube.YouTubeCollector
 import io.github.rmac0001.foursight.core.secrets.InMemorySecretStore
@@ -44,7 +45,7 @@ class YouTubeTest {
         InMemorySecretStore().apply {
             write(SecretName.GOOGLE_CLIENT_ID, "fixture-client-id")
             write(SecretName.GOOGLE_CLIENT_SECRET, "fixture-client-secret")
-            if (refresh != null) write(SecretName.GOOGLE_REFRESH_TOKEN, refresh)
+            if (refresh != null) write(SecretName.GOOGLE_YOUTUBE_REFRESH_TOKEN, refresh)
         }
 
     private val tokenJson =
@@ -143,7 +144,7 @@ class YouTubeTest {
 
     @Test
     fun signInUrlAsksForOfflineAccessWithPkce() {
-        val auth = GoogleAuth(client { respondJson("{}") }, secrets())
+        val auth = GoogleAuth(client { respondJson("{}") }, secrets(), GoogleGrant.YOUTUBE)
         val url = Url(auth.begin("http://127.0.0.1:50123").authorizeUrl)
         assertEquals("accounts.google.com", url.host)
         assertEquals("fixture-client-id", url.parameters["client_id"])
@@ -152,7 +153,9 @@ class YouTubeTest {
         assertEquals(43, url.parameters["code_challenge"]!!.length)
         assertEquals("offline", url.parameters["access_type"])
         assertEquals("consent", url.parameters["prompt"])
-        assertEquals(GoogleAuth.SCOPES.joinToString(" "), url.parameters["scope"])
+        assertEquals(GoogleGrant.YOUTUBE.scopes.joinToString(" "), url.parameters["scope"])
+        assertFalse("drive" in url.parameters["scope"]!!, "Google refuses YouTube and Drive in one consent")
+        assertNull(url.parameters["include_granted_scopes"])
         assertEquals("/", auth.loopbackPath)
     }
 
@@ -161,7 +164,7 @@ class YouTubeTest {
         runTest {
             val requests = mutableListOf<HttpRequestData>()
             val store = secrets()
-            val auth = GoogleAuth(client(requests) { respondJson(tokenJson) }, store)
+            val auth = GoogleAuth(client(requests) { respondJson(tokenJson) }, store, GoogleGrant.YOUTUBE)
             assertEquals("fixture-access", auth.accessToken(now))
             assertEquals("fixture-access", auth.accessToken(now))
             assertEquals(1, requests.size, "second call uses the cached token")
@@ -176,7 +179,7 @@ class YouTubeTest {
                     .body.contentType
                     .toString(),
             )
-            assertEquals("fixture-google-refresh", store.read(SecretName.GOOGLE_REFRESH_TOKEN))
+            assertEquals("fixture-google-refresh", store.read(SecretName.GOOGLE_YOUTUBE_REFRESH_TOKEN))
         }
 
     @Test
@@ -191,12 +194,13 @@ class YouTubeTest {
                         )
                     },
                     secrets(),
+                    GoogleGrant.YOUTUBE,
                 )
             assertEquals(
                 FailureKind.SIGN_IN_EXPIRED,
                 assertFailsWith<CollectionException> { auth.accessToken(now) }.kind,
             )
-            val none = GoogleAuth(client { respondJson("{}") }, secrets(refresh = null))
+            val none = GoogleAuth(client { respondJson("{}") }, secrets(refresh = null), GoogleGrant.YOUTUBE)
             assertEquals(FailureKind.NOT_CONNECTED, assertFailsWith<CollectionException> { none.accessToken(now) }.kind)
         }
 
@@ -205,7 +209,11 @@ class YouTubeTest {
         runTest {
             val requests = mutableListOf<HttpRequestData>()
             val http = client(requests, youtubeRoutes())
-            val collection = YouTubeCollector(YouTubeApi(http), GoogleAuth(http, secrets())).collect(now, "dev-1", day)
+            val collection =
+                YouTubeCollector(
+                    YouTubeApi(http),
+                    GoogleAuth(http, secrets(), GoogleGrant.YOUTUBE),
+                ).collect(now, "dev-1", day)
 
             assertEquals(listOf("fx-a", "fx-b"), collection.posts.map { it.postId }, "private videos are left out")
             val short = collection.posts.first()
@@ -248,7 +256,11 @@ class YouTubeTest {
     fun analyticsFailureKeepsDataApiNumbersAndWarns() =
         runTest {
             val http = client(route = youtubeRoutes(analyticsFails = true))
-            val collection = YouTubeCollector(YouTubeApi(http), GoogleAuth(http, secrets())).collect(now, "dev-1", day)
+            val collection =
+                YouTubeCollector(
+                    YouTubeApi(http),
+                    GoogleAuth(http, secrets(), GoogleGrant.YOUTUBE),
+                ).collect(now, "dev-1", day)
             val a = collection.snapshots.single { it.itemId == "fx-a" }
             assertEquals(1500.0, a.value("views"))
             assertFalse("watch_time_seconds" in a.values)
