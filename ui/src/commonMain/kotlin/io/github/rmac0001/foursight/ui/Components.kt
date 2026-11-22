@@ -1,20 +1,30 @@
 package io.github.rmac0001.foursight.ui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
@@ -109,10 +119,12 @@ fun Panel(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             note?.let { Muted(it) }
             content()
@@ -129,20 +141,58 @@ fun StatTile(
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier.widthIn(min = 150.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = modifier.widthIn(min = 160.dp),
+        shape = MaterialTheme.shapes.small,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
-        Column(Modifier.padding(12.dp)) {
-            Text(
-                label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-            sub?.let { Muted(it) }
+        Row {
+            Box(Modifier.width(3.dp).height(76.dp).background(MaterialTheme.colorScheme.primary))
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                sub?.let { Muted(it) }
+            }
         }
     }
 }
+
+/** Fluent's primary button: square-ish corners, the brand orange. */
+@Composable
+fun PrimaryButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) = Button(
+    onClick = onClick,
+    modifier = modifier,
+    enabled = enabled,
+    shape = MaterialTheme.shapes.small,
+    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+    content = content,
+)
+
+/** Fluent's standard button: a thin outline on the surface. */
+@Composable
+fun SecondaryButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) = OutlinedButton(
+    onClick = onClick,
+    modifier = modifier,
+    enabled = enabled,
+    shape = MaterialTheme.shapes.small,
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+    content = content,
+)
 
 @Composable
 fun Muted(text: String) {
@@ -160,7 +210,13 @@ fun <T> ChoiceChips(
 ) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         options.forEach { o ->
-            FilterChip(selected = o == selected, onClick = { onSelect(o) }, label = { Text(label(o)) })
+            FilterChip(
+                selected = o == selected,
+                onClick = { onSelect(o) },
+                label = { Text(label(o)) },
+                shape = MaterialTheme.shapes.small,
+                colors = chipColors(),
+            )
         }
     }
 }
@@ -183,10 +239,19 @@ fun <T> MultiChips(
                     if (next.isNotEmpty()) onChange(next)
                 },
                 label = { Text(label(o)) },
+                shape = MaterialTheme.shapes.small,
+                colors = chipColors(),
             )
         }
     }
 }
+
+@Composable
+private fun chipColors() =
+    FilterChipDefaults.filterChipColors(
+        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+    )
 
 /** Two cells of a simple label/value table. */
 @Composable

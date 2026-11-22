@@ -246,6 +246,20 @@ step forward.
 - **Checked on Roger's PC:** the installed app opens from its shortcut and shows Overview, Content
   (list and a video page), and Accounts on the real database.
 
+## Look and feel (November 22, 2026)
+
+- **Roger's request:** a proper icon, his TikTok colors, and a Microsoft 365 feel.
+- **Colors:** the Retro Sunset brand from his Video Toolkit note (burnt orange `#E0702F` as the one
+  accent, dark brown `#2B1B12` for the header bar and the dark theme, cream `#F3E3C3` for the
+  wordmark), on Microsoft 365-style neutral grays and white cards.
+- **Icon:** a burnt-orange sun cut by four stripes on dark brown, drawn as pure shapes by
+  `scripts/make-icon.py` (window and taskbar PNG, installer ICO). The app bar draws the same mark.
+- **Microsoft 365 look:** a brown app bar with the wordmark, a left navigation pane with Segoe Fluent
+  Icons and an orange selection bar, Segoe UI text, 4 px corners on buttons and chips, bordered cards,
+  KPI tiles with an accent edge, and Power BI-style charts (gridlines, a soft fill, two per row).
+- **Fonts** come from the PC's own font folder (Segoe UI, Segoe Fluent Icons, Cooper Black for the
+  wordmark); nothing is bundled, and a missing font falls back to the default.
+
 ## To verify live
 
 From the spec's "Still open" list; neither can be known until it's tested.

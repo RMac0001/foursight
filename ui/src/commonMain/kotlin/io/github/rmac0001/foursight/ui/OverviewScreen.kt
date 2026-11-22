@@ -1,11 +1,17 @@
 package io.github.rmac0001.foursight.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -13,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.rmac0001.foursight.core.SocialPlatform
@@ -257,25 +264,44 @@ private fun OverviewBody(
                 "Each platform on its own chart: their sizes are too different to " +
                     "share a scale.",
         ) {
-            data.trends.series.filter { it.metric == Metrics.FOLLOWERS }.forEach { series ->
-                Text(series.platform.displayName)
-                if (series.unavailableReason != null) {
-                    Muted(series.unavailableReason!!)
-                } else {
-                    LineChart(
-                        listOf(
-                            trendSeries(
-                                series.platform.displayName,
-                                platformColor(series.platform),
-                                series.points,
-                                zone,
-                                change = false,
-                                source = sourceOf(series.platform, Metrics.FOLLOWERS.id),
-                            ),
-                        ),
-                    )
+            // Two small charts per row.
+            data.trends.series.filter { it.metric == Metrics.FOLLOWERS }.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    pair.forEach { series ->
+                        Column(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    Modifier
+                                        .size(
+                                            10.dp,
+                                        ).background(platformColor(series.platform), RoundedCornerShape(2.dp)),
+                                )
+                                Text("  ${series.platform.displayName}", style = MaterialTheme.typography.titleSmall)
+                            }
+                            if (series.unavailableReason != null) {
+                                Muted(series.unavailableReason!!)
+                            } else {
+                                LineChart(
+                                    listOf(
+                                        trendSeries(
+                                            series.platform.displayName,
+                                            platformColor(series.platform),
+                                            series.points,
+                                            zone,
+                                            change = false,
+                                            source = sourceOf(series.platform, Metrics.FOLLOWERS.id),
+                                        ),
+                                    ),
+                                    height = 150.dp,
+                                    showLegend = false,
+                                )
+                            }
+                        }
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
+            Muted("Dotted line or hollow dot: a gap (no capture), never filled in.")
         }
         Panel(
             "Views gained per day",

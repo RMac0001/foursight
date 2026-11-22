@@ -103,6 +103,8 @@ compose.desktop {
                 "jdk.crypto.ec",
             )
             windows {
+                // Drawn by scripts/make-icon.py (the Retro Sunset brand).
+                iconFile.set(project.file("icons/foursight.ico"))
                 menuGroup = "FourSight"
                 perUserInstall = true
                 // Fixed so later installers upgrade this one instead of installing beside it.

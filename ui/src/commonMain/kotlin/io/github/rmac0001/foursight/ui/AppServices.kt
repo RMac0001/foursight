@@ -64,4 +64,7 @@ interface AppServices {
     fun setVault(path: String): String
 
     val driveConnected: Boolean
+
+    /** The platform's fonts for the Microsoft 365 look and the brand wordmark; defaults when absent. */
+    val fonts: BrandFonts get() = BrandFonts()
 }

@@ -1,5 +1,8 @@
 package io.github.rmac0001.foursight.desktop
 
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.platform.Font
 import io.github.rmac0001.foursight.core.SocialPlatform
 import io.github.rmac0001.foursight.core.collect.PlatformRunResult
 import io.github.rmac0001.foursight.core.model.PostRef
@@ -10,6 +13,7 @@ import io.github.rmac0001.foursight.core.query.QueryService
 import io.github.rmac0001.foursight.desktop.auth.signIn
 import io.github.rmac0001.foursight.desktop.obsidian.ObsidianSettings
 import io.github.rmac0001.foursight.ui.AppServices
+import io.github.rmac0001.foursight.ui.BrandFonts
 import io.github.rmac0001.foursight.ui.Connection
 import io.github.rmac0001.foursight.ui.VaultStatus
 import kotlinx.coroutines.Dispatchers
@@ -147,4 +151,31 @@ class DesktopAppServices(
     }
 
     override val driveConnected: Boolean get() = services.driveConnected
+
+    override val fonts: BrandFonts by lazy { windowsFonts() }
+}
+
+/**
+ * Segoe UI, Segoe Fluent Icons and Cooper Black from the PC's own font folder (the Microsoft 365
+ * look and Roger's Retro Sunset brand). Nothing is bundled; a missing font falls back to defaults.
+ */
+private fun windowsFonts(): BrandFonts {
+    val dir = File(System.getenv("WINDIR") ?: "C:\\Windows", "Fonts")
+
+    fun file(name: String) = File(dir, name).takeIf { it.isFile }
+    val segoe = file("segoeui.ttf")
+    val text =
+        segoe?.let {
+            FontFamily(
+                listOfNotNull(
+                    Font(it, FontWeight.Normal),
+                    file("seguisb.ttf")?.let { f -> Font(f, FontWeight.SemiBold) },
+                    file("segoeuib.ttf")?.let { f -> Font(f, FontWeight.Bold) },
+                    file("segoeuil.ttf")?.let { f -> Font(f, FontWeight.Light) },
+                ),
+            )
+        }
+    val icons = (file("SegoeIcons.ttf") ?: file("segmdl2.ttf"))?.let { FontFamily(Font(it)) }
+    val wordmark = file("COOPBL.TTF")?.let { FontFamily(Font(it)) }
+    return BrandFonts(text, icons, wordmark)
 }

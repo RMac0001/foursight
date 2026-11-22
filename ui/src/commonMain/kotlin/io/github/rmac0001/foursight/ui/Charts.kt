@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -34,6 +35,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.rmac0001.foursight.core.query.Format
@@ -87,6 +89,8 @@ fun LineChart(
     series: List<ChartSeries>,
     modifier: Modifier = Modifier,
     decimals: Int = 0,
+    height: Dp = 200.dp,
+    showLegend: Boolean = true,
 ) {
     val all = series.flatMap { it.points }
     if (all.none { it.y != null }) {
@@ -111,7 +115,7 @@ fun LineChart(
         Canvas(
             Modifier
                 .fillMaxWidth()
-                .height(220.dp)
+                .height(height)
                 .onSizeChanged { width = it.width }
                 .pointerInput(series, width) {
                     awaitPointerEventScope {
@@ -136,8 +140,12 @@ fun LineChart(
             val top = 8f
 
             fun py(v: Double) = (bottom - (v - lo) / (hi - lo) * (bottom - top)).toFloat()
+            // Light horizontal gridlines (the Power BI look) and the baseline.
+            listOf(0.25f, 0.5f, 0.75f).forEach { f ->
+                val y = top + (bottom - top) * f
+                drawLine(axisColor.copy(alpha = 0.5f), Offset(LEFT, y), Offset(scale.right, y))
+            }
             drawLine(axisColor, Offset(LEFT, bottom), Offset(scale.right, bottom))
-            drawLine(axisColor, Offset(LEFT, top), Offset(LEFT, bottom))
             listOf(lo to bottom, hi to top).forEach { (v, y) ->
                 drawText(
                     measurer,
@@ -154,13 +162,30 @@ fun LineChart(
             series.forEach { s ->
                 val sorted = s.points.sortedBy { it.x }
                 val real = sorted.filter { it.y != null }
+                // A soft fill under a lone series' solid stretches; never under a gap.
+                if (series.size == 1 && real.size > 1) {
+                    real.zipWithNext().forEach { (a, b) ->
+                        val gap = sorted.any { it.x > a.x && it.x < b.x && it.y == null }
+                        if (!gap) {
+                            val area =
+                                Path().apply {
+                                    moveTo(scale.px(a.x), bottom)
+                                    lineTo(scale.px(a.x), py(a.y!!))
+                                    lineTo(scale.px(b.x), py(b.y!!))
+                                    lineTo(scale.px(b.x), bottom)
+                                    close()
+                                }
+                            drawPath(area, s.color.copy(alpha = 0.12f))
+                        }
+                    }
+                }
                 real.zipWithNext().forEach { (a, b) ->
                     val gap = sorted.any { it.x > a.x && it.x < b.x && it.y == null }
                     drawLine(
                         s.color,
                         Offset(scale.px(a.x), py(a.y!!)),
                         Offset(scale.px(b.x), py(b.y!!)),
-                        strokeWidth = 3f,
+                        strokeWidth = 2.5f,
                         pathEffect = if (gap) PathEffect.dashPathEffect(floatArrayOf(6f, 6f)) else null,
                     )
                 }
@@ -188,7 +213,7 @@ fun LineChart(
                 }
             } ?: listOf("Hover over or tap the chart to see a day's numbers.")
         Column(Modifier.padding(top = 4.dp)) { lines.forEach { Muted(it) } }
-        Legend(series)
+        if (showLegend) Legend(series)
     }
 }
 
