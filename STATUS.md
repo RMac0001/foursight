@@ -10,7 +10,7 @@ step forward.
 | --- | --- |
 | 1. Setup (developer apps) | Done by Roger, November 21, 2026 (see the spec's Setup status) |
 | 2. Core | Built and tested on branch `claude/step-2-core` (see below) |
-| 3. Collectors | Not started |
+| 3. Collectors | In progress on branch `claude/step-3-collectors`: TikTok built and verified live |
 | 4. CLI and MCP | Not started |
 | 5. Obsidian writer | Not started |
 | 6. Windows UI | Not started (placeholder shell with the six sections) |
@@ -47,19 +47,52 @@ step forward.
 - **Not yet exercised on a device:** the Android database and Keystore store compile but run on
   Android only (step 7). The Drive adapter is tested against a fake; its first live run is in step 3.
 
-### Choices made in step 2 that Roger should confirm
+### Choices made in step 2, confirmed by Roger (November 21, 2026)
 
 - **Day-7 window:** a capture counts as the day-7 number only between day 7.0 and day 8.0; after
   that the post shows as missed instead of locking on a later day's numbers.
 - **Device registry:** one file per device (`devices/<device-id>.json`) instead of the spec's single
-  `device-registry.json`, so every Drive file keeps exactly one writer.
-- **Engagement rate:** (likes + comments + shares + saves where reported) ÷ views.
+  `device-registry.json`, so every Drive file keeps exactly one writer. The vault note needs the
+  matching one-line change (Roger's call; `docs/SPEC.md` is recopied from it).
+- **Engagement rate:** (likes + comments + shares + saves where reported) ÷ views × 100.
+- **Sign-in before step 4:** `foursight connect <platform>` and `foursight collect` are built in
+  step 3 so the first live sign-in can happen; the rest of the CLI comes in step 4. `connect` isn't
+  in the spec's CLI table yet.
+
+### Windows run (November 21, 2026)
+
+- `gradlew.bat check` passes on Roger's PC (Windows 11): 47 desktop tests, 0 skipped, including the
+  Credential Manager round trip.
+
+## Step 3: collectors (in progress)
+
+- **TikTok** (built November 21, 2026): Login Kit for Desktop sign-in (loopback on
+  `http://127.0.0.1:<random port>/callback/`, PKCE with the hex SHA-256 challenge, `state` check),
+  token renewal that stores the rotated refresh token before anything else, `/v2/user/info/` for
+  followers and every page of `/v2/video/list/` for lifetime views, likes, comments and shares. Only
+  the read scopes (`user.info.basic`, `user.info.stats`, `video.list`) are requested; posting scopes
+  wait for step 8. Missing fields stay missing. The access token lives in memory for one run.
+- **Collection runner:** each platform runs on its own, writes in one transaction, and records every
+  attempt (last success, last attempt, last error, sign-in expiry). `collect --day7-due` collects only
+  platforms with a post in the day-7 window that has no capture there yet (the extra run near day 7).
+- **CLI so far:** `foursight connect <platform>` and `foursight collect [--platform x] [--day7-due]`.
+  From a checkout: `gradlew.bat :desktopApp:cli --args="connect tiktok"`.
+- **Not yet:** the YouTube, Facebook and Instagram collectors; Drive publishing after collection
+  (needs the Google sign-in); the installed `foursight` console command and the Task Scheduler
+  commands for Roger to run.
+- **Tests:** 57 JVM tests (TikTok client, auth and collector against doc-shaped fixtures; runner).
 
 ## To verify live
 
 From the spec's "Still open" list; neither can be known until it's tested.
 
-- [ ] **TikTok first sign-in:** the Display API returns the account's stats in Sandbox.
+- [x] **TikTok first sign-in** (verified November 22, 2026): in Sandbox, with One Fat Man's Journey
+  as target user, the sign-in granted `user.info.basic`, `user.info.stats` and `video.list`, and the
+  first collection returned 44 public videos (back to January 2023) with views, likes, comments and
+  shares, plus the follower count. Two live findings: the token endpoint rejects a `Content-Type`
+  with a `charset` parameter (`invalid_request`, "The request parameters are malformed"), and the
+  refresh token came back valid for 365 days, not the 180 the docs state (FourSight stores what
+  the response says). The vault note's "Still open" item can be ticked.
 - [ ] **Drive across devices:** files the Windows client creates under `drive.file` are visible
   to the Android client. Test before building the merge logic on it.
 
