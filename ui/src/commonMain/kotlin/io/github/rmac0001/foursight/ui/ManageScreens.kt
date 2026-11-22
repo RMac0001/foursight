@@ -6,10 +6,8 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -100,7 +98,7 @@ fun AccountsScreen(
 
     ScreenTitle("Accounts", "Sign-ins, last refresh, errors and limits for each connection.")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Button(
+        PrimaryButton(
             enabled = busy == null,
             onClick = {
                 busy = "Refreshing every platform..."
@@ -147,7 +145,7 @@ fun AccountsScreen(
                         PlatformLimits.of(p).forEach { Muted("Limit: $it") }
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
+                        SecondaryButton(
                             enabled = busy == null,
                             onClick = {
                                 busy = "Waiting for the ${c.label} sign-in in your browser (up to 5 minutes)..."
@@ -159,7 +157,7 @@ fun AccountsScreen(
                             },
                         ) { Text(if (c.connected) "Sign in again" else "Sign in") }
                         if (c.platforms.isNotEmpty()) {
-                            OutlinedButton(
+                            SecondaryButton(
                                 enabled = busy == null,
                                 onClick = {
                                     busy = "Refreshing ${c.label}..."
@@ -204,7 +202,7 @@ fun SettingsScreen(
                 OutlinedTextField(path, {
                     path = it
                 }, label = { Text("Vault folder") }, singleLine = true, modifier = Modifier.width(520.dp))
-                Button(onClick = { message = services.setVault(path.trim()) }) { Text("Save") }
+                PrimaryButton(onClick = { message = services.setVault(path.trim()) }) { Text("Save") }
                 if (v != null) {
                     KeyValue("Video notes folder", v.notesFolder)
                     KeyValue("Stats Overview note", v.overviewNote)
@@ -231,10 +229,10 @@ fun SettingsScreen(
                     "per captured value.",
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = {
+                SecondaryButton(onClick = {
                     scope.launch { message = services.export(ExportFormat.JSON) ?: message }
                 }) { Text("Export JSON...") }
-                OutlinedButton(onClick = {
+                SecondaryButton(onClick = {
                     scope.launch { message = services.export(ExportFormat.CSV) ?: message }
                 }) { Text("Export CSV...") }
             }

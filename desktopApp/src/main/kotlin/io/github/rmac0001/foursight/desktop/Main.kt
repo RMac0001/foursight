@@ -1,5 +1,6 @@
 package io.github.rmac0001.foursight.desktop
 
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -50,7 +51,8 @@ fun main(args: Array<String>) {
                 exitApplication()
             },
             title = "FourSight",
-            state = rememberWindowState(width = 1280.dp, height = 860.dp),
+            icon = painterResource("foursight-icon.png"),
+            state = rememberWindowState(width = 1360.dp, height = 900.dp),
         ) {
             App(DesktopAppServices(services))
         }

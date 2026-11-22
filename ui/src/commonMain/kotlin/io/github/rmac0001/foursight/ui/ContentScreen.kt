@@ -9,12 +9,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -154,7 +152,7 @@ private fun SuggestionRow(
                 )
             }
         }
-        Button(onClick = { onConfirm(s.posts.map { it.ref }) }) { Text("Confirm") }
+        PrimaryButton(onClick = { onConfirm(s.posts.map { it.ref }) }) { Text("Confirm") }
     }
     HorizontalDivider()
 }
@@ -206,7 +204,7 @@ private fun VideoDetail(
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 entry.video.posts.sortedBy { it.platform.ordinal }.forEach { p ->
                     p.url?.let { url ->
-                        OutlinedButton(
+                        SecondaryButton(
                             onClick = { services.openUrl(url) },
                         ) { Text("Open on ${p.platform.displayName}") }
                     }
@@ -328,7 +326,7 @@ private fun ComparePanel(
         note = "Day 7 compares both at the same age. These are differences, not causes.",
     ) {
         Row {
-            OutlinedButton(onClick = { open = true }) {
+            SecondaryButton(onClick = { open = true }) {
                 Text(
                     other?.let {
                         Labels.title(
