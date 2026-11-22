@@ -225,11 +225,12 @@ class CliAndMcpTest {
                 "get_freshness",
                 "get_metric_definitions",
                 "refresh",
+                "write_obsidian_stats",
                 "export",
             ),
             mcp.tools.map { it.name },
         )
-        assertEquals(listOf("refresh"), mcp.tools.filter { !it.readOnly }.map { it.name })
+        assertEquals(listOf("refresh", "write_obsidian_stats"), mcp.tools.filter { !it.readOnly }.map { it.name })
     }
 
     @Test

@@ -87,6 +87,33 @@ object SevenDayBlock {
         }
     }
 
+    /**
+     * The note's frontmatter stats fields (Roger's decision, November 22, 2026: one field per
+     * platform, nothing combined): `views_<platform>`, `shares_per_1k_<platform>`,
+     * `followers_per_1k_<platform>` where the platform reports follows per video, and
+     * `stats_day7_date`. Platforms use the Playbook's names (tiktok, shorts, reels, instagram). A
+     * platform without a day-7 lock, or a missing number, gets null: missing, never 0.
+     */
+    fun fields(report: SevenDayReport): Map<String, String?> {
+        val out = linkedMapOf<String, String?>()
+        val posts = report.posts.sortedBy { it.post.platform.ordinal }
+        posts.forEach { d ->
+            val name = label(d.post.platform).lowercase()
+            val locked = d.result is Day7Result.Locked
+            out["views_$name"] =
+                if (locked) d.values[Metrics.VIEWS.id]?.let { Format.number(it).replace(",", "") } else null
+            out["shares_per_1k_$name"] =
+                if (locked) d.sharesPer1k?.value?.let { Format.number(it, 1).replace(",", "") } else null
+            if (d.followersPer1kUnavailable == null) {
+                out["followers_per_1k_$name"] =
+                    if (locked) d.followersPer1k?.value?.let { Format.number(it, 1).replace(",", "") } else null
+            }
+        }
+        out["stats_day7_date"] =
+            posts.mapNotNull { (it.result as? Day7Result.Locked)?.snapshot?.captureDay }.maxOrNull()?.toString()
+        return out
+    }
+
     private fun stateOr(d: PostSevenDay): String? =
         when (d.result) {
             is Day7Result.Locked -> null
