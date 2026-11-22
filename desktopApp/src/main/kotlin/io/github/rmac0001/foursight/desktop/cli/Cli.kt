@@ -54,7 +54,7 @@ class Cli(
                 err.println("Signing in to ${platform.displayName} isn't built yet.")
                 return 1
             }
-        return LoopbackReceiver().use { receiver ->
+        return LoopbackReceiver(flow.loopbackPath).use { receiver ->
             try {
                 val request = flow.begin(receiver.redirectUri)
                 out.println("Opening ${platform.displayName} sign-in in your browser...")

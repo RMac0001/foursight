@@ -9,25 +9,28 @@ import java.net.URLDecoder
 import kotlin.time.Duration
 
 /**
- * Receives one OAuth callback on `http://127.0.0.1:<random port>/callback/` (spec: Architecture,
- * "Sign-in", Windows loopback redirect; TikTok's registered redirect is 127.0.0.1 with a wildcard port
- * and the path /callback/).
+ * Receives one OAuth callback on `http://127.0.0.1:<random port><path>` (spec: Architecture,
+ * "Sign-in", Windows loopback redirect). TikTok's registered redirect uses the path /callback/;
+ * Google's loopback redirect is the bare address, path `/`, which the redirect URI leaves off.
  * It listens on the loopback interface only and stops after the first callback or on [close].
  */
-class LoopbackReceiver : AutoCloseable {
+class LoopbackReceiver(
+    private val path: String,
+) : AutoCloseable {
     private val server = HttpServer.create(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 0)
     private val callback = CompletableDeferred<Map<String, String>>()
 
-    val redirectUri: String = "http://127.0.0.1:${server.address.port}$PATH"
+    val redirectUri: String = "http://127.0.0.1:${server.address.port}" + if (path == "/") "" else path
 
     init {
-        server.createContext(PATH) { exchange ->
+        server.createContext(path) { exchange ->
             exchange.use {
-                if (exchange.requestURI.path != PATH) {
+                val params = parseQuery(exchange.requestURI.rawQuery)
+                // Only the callback itself counts; a stray request (a favicon, say) doesn't.
+                if (exchange.requestURI.path != path || ("code" !in params && "error" !in params)) {
                     exchange.sendResponseHeaders(404, -1)
                     return@use
                 }
-                val params = parseQuery(exchange.requestURI.rawQuery)
                 val ok = params.containsKey("code") && !params.containsKey("error")
                 val page =
                     if (ok) {
@@ -59,8 +62,4 @@ class LoopbackReceiver : AutoCloseable {
                 val (k, v) = pair.split('=', limit = 2).let { it[0] to it.getOrElse(1) { "" } }
                 URLDecoder.decode(k, Charsets.UTF_8) to URLDecoder.decode(v, Charsets.UTF_8)
             }
-
-    private companion object {
-        const val PATH = "/callback/"
-    }
 }

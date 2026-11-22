@@ -34,6 +34,7 @@ class TikTokAuth(
     private val secrets: SecretStore,
 ) : SignInFlow {
     override val platform = SocialPlatform.TIKTOK
+    override val loopbackPath = "/callback/"
 
     override fun begin(redirectUri: String): SignInRequest {
         val (clientKey, _) = clientKeys()

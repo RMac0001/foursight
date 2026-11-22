@@ -2,8 +2,8 @@
 
 How every number in FourSight is sourced and calculated. The code is the source of truth
 (`core/.../metrics/Metrics.kt` and `Calculations.kt`); a test checks that every metric id in the
-code appears in this file. Definitions version: **1**. Sources checked against each platform's live
-API reference on November 21, 2026.
+code appears in this file. Definitions version: **2**. Sources checked against each platform's live
+API reference on November 21, 2026 (YouTube rechecked November 22, 2026).
 
 **Rules that apply everywhere**
 
@@ -17,16 +17,16 @@ API reference on November 21, 2026.
 
 | Id | Kind | TikTok | YouTube | Facebook | Instagram |
 | --- | --- | --- | --- | --- | --- |
-| `views` | count | `view_count` | `views` | `fb_reels_total_plays` (includes replays) | `views` |
-| `likes` | count | `like_count` | `likes` | `post_video_likes_by_reaction_type` (all reactions) | `likes` |
-| `comments` | count | `comment_count` | `comments` | `post_video_social_actions` (comments) | `comments` |
-| `shares` | count | `share_count` | `shares` | `post_video_social_actions` (shares) | `shares` |
+| `views` | count | `view_count` | `statistics.viewCount` (Data API, current) | `fb_reels_total_plays` (includes replays) | `views` |
+| `likes` | count | `like_count` | `statistics.likeCount` (Data API, current) | `post_video_likes_by_reaction_type` (all reactions) | `likes` |
+| `comments` | count | `comment_count` | `statistics.commentCount` (Data API, current) | `post_video_social_actions` (comments) | `comments` |
+| `shares` | count | `share_count` | `shares` (Analytics) | `post_video_social_actions` (shares) | `shares` |
 | `saves` | count | not available | not available | not available | `saved` |
-| `followers_gained` | count | not available per post | `subscribersGained` (video filter) | `post_video_followers` | not available for Reels |
+| `followers_gained` | count | not available per post | `subscribersGained` (Analytics, video filter) | `post_video_followers` | not available for Reels |
 | `reach` | count | not available | not available | `post_impressions_unique` | `reach` |
-| `watch_time_seconds` | duration | not available | `estimatedMinutesWatched` × 60 | `post_video_view_time` ÷ 1,000 | `ig_reels_video_view_total_time` |
-| `average_view_duration_seconds` | duration | not available | `averageViewDuration` | `post_video_avg_time_watched` ÷ 1,000 (includes replays) | `ig_reels_avg_watch_time` |
-| `average_view_percentage` | rate | not available | `averageViewPercentage` | retention graph only | not available |
+| `watch_time_seconds` | duration | not available | `estimatedMinutesWatched` × 60 (Analytics) | `post_video_view_time` ÷ 1,000 | `ig_reels_video_view_total_time` |
+| `average_view_duration_seconds` | duration | not available | `averageViewDuration` (Analytics) | `post_video_avg_time_watched` ÷ 1,000 (includes replays) | `ig_reels_avg_watch_time` |
+| `average_view_percentage` | rate | not available | `averageViewPercentage` (Analytics) | retention graph only | not available |
 | `skip_rate` | rate | not available | not available | not available | `reels_skip_rate` |
 | `followers` (account) | count | `follower_count` | `subscriberCount` (rounded by YouTube to 3 significant figures) | Page `followers_count` | IG User `followers_count` |
 
@@ -41,6 +41,18 @@ Notes from the references:
 - **Facebook** Reels insights are lifetime totals only, so a Reel's past days can't be rebuilt.
 - **TikTok** returns today's totals only, so a TikTok's past days can't be rebuilt.
 - **YouTube** is the only platform with per-day history per video.
+- **YouTube has two sources** (Roger's decision, November 22, 2026, definitions version 2). Views,
+  likes and comments come from the Data API's current counters, so a day-7 number is from day 7.
+  Shares, subscribers gained, watch time, average view duration and average percentage viewed come
+  from YouTube Analytics, which runs behind by a period Google doesn't publish. Each snapshot keeps
+  `analytics_through`, the last day Analytics had data for when it was captured, and those numbers
+  are shown with that date. Analytics days are Pacific time.
+- **YouTube `subscribersGained` per video** counts only subscriptions made on that video's watch
+  page (Analytics' rule when a report is filtered to a video).
+- **YouTube content type:** short-form when the video is 3 minutes or less (YouTube's Shorts
+  limit), long-form otherwise. This is a rule on duration, not YouTube's own label.
+- **YouTube posts** are the channel's public videos; private and unlisted ones are left out, as
+  TikTok's API lists public posts only.
 
 ## Calculations
 

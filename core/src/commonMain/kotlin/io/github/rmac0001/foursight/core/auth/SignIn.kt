@@ -33,6 +33,12 @@ data class SignInResult(
 interface SignInFlow {
     val platform: SocialPlatform
 
+    /**
+     * The path the desktop loopback listener serves: TikTok's registered redirect ends in
+     * `/callback/`; Google's loopback redirect is the bare `http://127.0.0.1:<port>` (path `/`).
+     */
+    val loopbackPath: String
+
     /** [redirectUri] is the exact callback URL the shell is listening on. */
     fun begin(redirectUri: String): SignInRequest
 
