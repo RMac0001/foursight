@@ -45,6 +45,16 @@ interface SignInFlow {
      */
     val loopbackPath: String
 
+    /** The host the loopback redirect URI names: `127.0.0.1`, or `localhost` for Meta. */
+    val loopbackHost: String get() = "127.0.0.1"
+
+    /**
+     * What follows the port in the redirect URI. Usually [loopbackPath]; Google wants the bare
+     * `http://127.0.0.1:<port>`, while Meta needs the trailing `/` because it adds one to a bare address
+     * and then rejects the code exchange as a redirect mismatch (found live November 22, 2026).
+     */
+    val loopbackRedirectSuffix: String get() = loopbackPath
+
     /** [redirectUri] is the exact callback URL the shell is listening on. */
     fun begin(redirectUri: String): SignInRequest
 

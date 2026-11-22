@@ -35,7 +35,12 @@ enum class SecretName(
     GOOGLE_DRIVE_REFRESH_TOKEN("FourSight/google/drive_refresh_token", enteredByRoger = false),
     META_APP_ID("FourSight/meta/app_id", enteredByRoger = true),
     META_APP_SECRET("FourSight/meta/app_secret", enteredByRoger = true),
-    META_USER_TOKEN("FourSight/meta/user_token", enteredByRoger = false),
+
+    // The Facebook Login for Business configuration id. Not a secret, but kept out of the public repo.
+    META_LOGIN_CONFIG_ID("FourSight/meta/login_config_id", enteredByRoger = true),
+
+    // A Page token made from a long-lived user token doesn't expire (Meta, "Get Long-Lived Tokens").
+    META_PAGE_TOKEN("FourSight/meta/page_token", enteredByRoger = false),
 }
 
 /** For tests and developer builds only. */

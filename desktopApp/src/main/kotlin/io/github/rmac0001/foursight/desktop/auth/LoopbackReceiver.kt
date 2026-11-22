@@ -16,11 +16,15 @@ import kotlin.time.Duration
  */
 class LoopbackReceiver(
     private val path: String,
+    /** The host name in the redirect URI. Meta's development mode allows `localhost` automatically. */
+    redirectHost: String = "127.0.0.1",
+    /** What follows the port in the redirect URI (see SignInFlow.loopbackRedirectSuffix). */
+    redirectSuffix: String = path,
 ) : AutoCloseable {
     private val server = HttpServer.create(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 0)
     private val callback = CompletableDeferred<Map<String, String>>()
 
-    val redirectUri: String = "http://127.0.0.1:${server.address.port}" + if (path == "/") "" else path
+    val redirectUri: String = "http://$redirectHost:${server.address.port}$redirectSuffix"
 
     init {
         server.createContext(path) { exchange ->

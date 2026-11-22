@@ -53,7 +53,7 @@ data class MetricDefinition(
  * API reference on November 21, 2026 (see STATUS.md, "API details checked").
  */
 object Metrics {
-    const val DEFINITIONS_VERSION = 2
+    const val DEFINITIONS_VERSION = 3
 
     private fun available(source: String) = Availability.Available(source)
 
@@ -164,7 +164,8 @@ object Metrics {
                             "subscribersGained (YouTube Analytics API, video filter: subscriptions from the " +
                                 "video's watch page only; lifetime through analytics_through)",
                         ),
-                    FACEBOOK to available("post_video_followers (video_insights, lifetime)"),
+                    FACEBOOK to
+                        available("post_video_followers (video_insights, lifetime; net follows, can be negative)"),
                     INSTAGRAM to
                         unavailable("Instagram's per-media follows metric covers feed posts and stories, not Reels."),
                 ),
@@ -182,7 +183,11 @@ object Metrics {
                 mapOf(
                     TIKTOK to unavailable("Not in the Display API."),
                     YOUTUBE to unavailable("Not in the YouTube Analytics API."),
-                    FACEBOOK to available("post_impressions_unique (video_insights, lifetime)"),
+                    FACEBOOK to
+                        unavailable(
+                            "Meta retired post_impressions_unique for Reels: the API rejects it as not a valid " +
+                                "insights metric (checked November 22, 2026).",
+                        ),
                     INSTAGRAM to available("reach (IG Media insights)"),
                 ),
         )
