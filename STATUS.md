@@ -9,7 +9,7 @@ step forward.
 | Step | State |
 | --- | --- |
 | 1. Setup (developer apps) | Done by Roger, November 21, 2026 (see the spec's Setup status) |
-| 2. Core | Not started (skeleton only) |
+| 2. Core | Built and tested on branch `claude/step-2-core` (see below) |
 | 3. Collectors | Not started |
 | 4. CLI and MCP | Not started |
 | 5. Obsidian writer | Not started |
@@ -27,6 +27,34 @@ step forward.
 - CI (GitHub Actions): format check, tests and the Android build on Linux; the Windows MSI
   installer on a Windows runner.
 
+## Step 2: core (November 21, 2026)
+
+- **Database** (SQLDelight 2.4.1, schema version 1): posts, raw snapshots with normalized values
+  (missing stays NULL, never 0), user-edit events, connection status, sync bookkeeping. Plain SQL
+  that works on Android 10's SQLite 3.22 (no upserts). Migrations are verified by SQLDelight's
+  `verifyMigrations` once version 2 exists.
+- **Metrics engine:** the metric catalog with per-platform sources or reasons they're unavailable,
+  per-1,000 rates, views per day, engagement rate, follower change, cross-platform sums (counts
+  only), and the day-7 lock. Definitions in `docs/metrics.md`.
+- **Sync:** `SyncStore` interface, Google Drive v3 adapter (`drive.file`), and the merge engine
+  (one writer per file, idempotent merge, last-writer-wins events with losers kept, per-file
+  transactions, bad files reported and skipped).
+- **Secrets:** `SecretStore` with Windows Credential Manager (JNA, CREDENTIALW) and an Android
+  Keystore (AES-GCM) implementation.
+- **Query services:** content library (confirmed groups plus unmatched posts), 7-day report,
+  freshness, metric definitions.
+- **Tests:** 47 JVM tests. The Credential Manager round trip runs on the Windows CI runner only.
+- **Not yet exercised on a device:** the Android database and Keystore store compile but run on
+  Android only (step 7). The Drive adapter is tested against a fake; its first live run is in step 3.
+
+### Choices made in step 2 that Roger should confirm
+
+- **Day-7 window:** a capture counts as the day-7 number only between day 7.0 and day 8.0; after
+  that the post shows as missed instead of locking on a later day's numbers.
+- **Device registry:** one file per device (`devices/<device-id>.json`) instead of the spec's single
+  `device-registry.json`, so every Drive file keeps exactly one writer.
+- **Engagement rate:** (likes + comments + shares + saves where reported) ÷ views.
+
 ## To verify live
 
 From the spec's "Still open" list; neither can be known until it's tested.
@@ -37,5 +65,38 @@ From the spec's "Still open" list; neither can be known until it's tested.
 
 ## API details checked
 
-None yet. Record each endpoint and metric name here with the date and the reference page it was
-checked against.
+Checked against the live reference pages on November 21, 2026.
+
+- **TikTok:** `GET https://open.tiktokapis.com/v2/user/info/` (`follower_count`, `likes_count`,
+  `video_count` need `user.info.stats`; `username` needs `user.info.profile`, which the app doesn't
+  have). `POST /v2/video/list/` (`max_count` up to 20, `cursor` is a millisecond timestamp) and
+  `POST /v2/video/query/` (`filters.video_ids`); video fields `id`, `create_time`, `title`,
+  `video_description`, `duration`, `cover_image_url` (6-hour TTL), `share_url`, `embed_link`,
+  `view_count`, `like_count`, `comment_count`, `share_count`. Rate limit 600 requests per minute per
+  endpoint. Access token 2 hours, refresh token 180 days, rotated on every refresh. Desktop redirect
+  `localhost`/`127.0.0.1` with a port (wildcard allowed); PKCE S256 with **hex-encoded** SHA256.
+- **YouTube Analytics:** `GET https://youtubeanalytics.googleapis.com/v2/reports`. Metrics `views`,
+  `engagedViews`, `estimatedMinutesWatched`, `averageViewDuration`, `averageViewPercentage`,
+  `subscribersGained`, `subscribersLost`, `likes`, `comments`, `shares`, `audienceWatchRatio`,
+  `relativeRetentionPerformance`, `viewerPercentage`. Dimensions `creatorContentType` (value
+  `SHORTS`), `insightTrafficSourceType`, `elapsedVideoTimeRatio`.
+- **YouTube Data API:** `channels` `statistics.subscriberCount` (rounded to 3 significant figures),
+  `contentDetails.relatedPlaylists.uploads`; `videos` `statistics.viewCount`, `likeCount`,
+  `commentCount`, `contentDetails.duration`.
+- **Google OAuth (desktop):** loopback redirect `http://127.0.0.1:<port>`, PKCE `S256`.
+- **Google Drive v3:** `GET /drive/v3/files` with `q` (`'<id>' in parents`, `trashed = false`,
+  quotes and backslashes escaped with a backslash), `POST /upload/drive/v3/files?uploadType=multipart`,
+  `PATCH /upload/drive/v3/files/{id}`, `GET /drive/v3/files/{id}?alt=media`, file field `version`.
+  The `drive.file` wording doesn't say whether access is per project or per OAuth client.
+- **Meta:** Graph API v27.0 is current. Reels `video_insights` (all lifetime):
+  `blue_reels_play_count`, `fb_reels_replay_count`, `fb_reels_total_plays`,
+  `post_impressions_unique`, `post_video_avg_time_watched`, `post_video_followers`,
+  `post_video_likes_by_reaction_type`, `post_video_retention_graph`, `post_video_social_actions`,
+  `post_video_view_time`. Page fields `followers_count`, `instagram_business_account`.
+- **Instagram (API with Facebook Login):** media insights for Reels `views`, `reach`, `likes`,
+  `comments`, `shares`, `saved`, `total_interactions`, `ig_reels_avg_watch_time`,
+  `ig_reels_video_view_total_time`, `reels_skip_rate`, `reposts`, `total_views`; `follows` covers
+  feed posts and stories only; `impressions` deprecated for media after July 2, 2024. User insights
+  `follows_and_unfollows`, `follower_demographics`, `engaged_audience_demographics`, `reach`,
+  `views`, `total_interactions` (`impressions` deprecated from v22.0); data may lag 48 hours; some
+  metrics need 100+ followers; missing data comes back empty, not 0. IG User field `followers_count`.
