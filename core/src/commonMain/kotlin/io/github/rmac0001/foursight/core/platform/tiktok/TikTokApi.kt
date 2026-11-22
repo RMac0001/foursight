@@ -4,7 +4,6 @@ import io.github.rmac0001.foursight.core.SocialPlatform
 import io.github.rmac0001.foursight.core.collect.CollectionException
 import io.github.rmac0001.foursight.core.collect.FailureKind
 import io.ktor.client.HttpClient
-import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
@@ -15,7 +14,9 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.URLBuilder
+import io.ktor.http.content.ByteArrayContent
 import io.ktor.http.contentType
+import io.ktor.http.formUrlEncode
 import io.ktor.http.parameters
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
@@ -161,7 +162,17 @@ class TikTokApi(
     ): TikTokTokens {
         val response =
             network(what) {
-                http.submitForm(url = TOKEN_URL, formParameters = parameters(form))
+                // Not submitForm: it sends "application/x-www-form-urlencoded; charset=UTF-8", and
+                // TikTok's token endpoint answers any Content-Type with a charset with
+                // invalid_request ("The request parameters are malformed"). Found live on November 22, 2026.
+                http.post(TOKEN_URL) {
+                    setBody(
+                        ByteArrayContent(
+                            parameters(form).formUrlEncode().encodeToByteArray(),
+                            ContentType.Application.FormUrlEncoded,
+                        ),
+                    )
+                }
             }
         val body = parse(what, response)
         val error = body.string("error")

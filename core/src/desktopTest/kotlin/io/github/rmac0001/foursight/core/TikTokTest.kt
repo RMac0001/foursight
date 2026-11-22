@@ -122,6 +122,14 @@ class TikTokTest {
             val result = auth.complete(request, mapOf("code" to "fixture-code", "state" to state), now)
 
             val form = recorder.requests.single().form()
+            // TikTok rejects a Content-Type with a charset parameter (found live, November 22, 2026).
+            assertEquals(
+                "application/x-www-form-urlencoded",
+                recorder.requests
+                    .single()
+                    .body.contentType
+                    .toString(),
+            )
             assertEquals("authorization_code", form["grant_type"])
             assertEquals("fixture-code", form["code"])
             assertEquals("http://127.0.0.1:50123/callback/", form["redirect_uri"])

@@ -10,7 +10,7 @@ step forward.
 | --- | --- |
 | 1. Setup (developer apps) | Done by Roger, November 21, 2026 (see the spec's Setup status) |
 | 2. Core | Built and tested on branch `claude/step-2-core` (see below) |
-| 3. Collectors | In progress on branch `claude/step-3-collectors`: TikTok built, not yet run live |
+| 3. Collectors | In progress on branch `claude/step-3-collectors`: TikTok built and verified live |
 | 4. CLI and MCP | Not started |
 | 5. Obsidian writer | Not started |
 | 6. Windows UI | Not started (placeholder shell with the six sections) |
@@ -86,7 +86,13 @@ step forward.
 
 From the spec's "Still open" list; neither can be known until it's tested.
 
-- [ ] **TikTok first sign-in:** the Display API returns the account's stats in Sandbox.
+- [x] **TikTok first sign-in** (verified November 22, 2026): in Sandbox, with One Fat Man's Journey
+  as target user, the sign-in granted `user.info.basic`, `user.info.stats` and `video.list`, and the
+  first collection returned 44 public videos (back to January 2023) with views, likes, comments and
+  shares, plus the follower count. Two live findings: the token endpoint rejects a `Content-Type`
+  with a `charset` parameter (`invalid_request`, "The request parameters are malformed"), and the
+  refresh token came back valid for 365 days, not the 180 the docs state (FourSight stores what
+  the response says). The vault note's "Still open" item can be ticked.
 - [ ] **Drive across devices:** files the Windows client creates under `drive.file` are visible
   to the Android client. Test before building the merge logic on it.
 
