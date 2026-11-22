@@ -11,7 +11,7 @@ step forward.
 | 1. Setup (developer apps) | Done by Roger, November 21, 2026 (details in the vault spec's Setup status) |
 | 2. Core | Built and tested on branch `claude/step-2-core` (see below) |
 | 3. Collectors | Done except Instagram's live check (no Reels on the linked account yet): TikTok, YouTube, Facebook, Drive publish, installed command and daily schedule verified live |
-| 4. CLI and MCP | Not started |
+| 4. CLI and MCP | Built and tested on branch `claude/step-4-cli-mcp`; audience, obsidian and post wait (see below). Claude isn't connected to the MCP server yet |
 | 5. Obsidian writer | Not started |
 | 6. Windows UI | Not started (placeholder shell with the six sections) |
 | 7. Android | Not started (placeholder app showing the shared shell) |
@@ -64,7 +64,7 @@ step forward.
 - `gradlew.bat check` passes on Roger's PC (Windows 11): 47 desktop tests, 0 skipped, including the
   Credential Manager round trip.
 
-## Step 3: collectors (in progress)
+## Step 3: collectors (done except Instagram's live check)
 
 - **TikTok** (built November 21, 2026): Login Kit for Desktop sign-in (loopback on
   `http://127.0.0.1:<random port>/callback/`, PKCE with the hex SHA-256 challenge, `state` check),
@@ -110,7 +110,7 @@ step forward.
   first run with Reels.
 - **Installed command and schedule** (verified live November 22, 2026): `scripts/install-windows.ps1`
   builds the app plus a jlinked Java runtime for the command (the app image's runtime has no java.exe
-  or javaw.exe), installs to `%USERPROFILE%\FourSightpp`, writes `binoursight.cmd`, adds `bin` to
+  or javaw.exe), installs to `%USERPROFILE%\FourSight\app`, writes `bin\foursight.cmd`, adds `bin` to
   the user PATH, and registers two per-user tasks under `\FourSight\` in Task Scheduler: "Daily
   collection" at 6:00 AM and "Day-7 check" every hour (`collect --day7-due`). Both run windowless
   (javaw with `--log`), only while Roger is signed in, and catch up after the PC was off. Logs go to
@@ -118,10 +118,52 @@ step forward.
 - **Why not AppData:** the Claude desktop app is a packaged app, and Windows redirects its writes to
   `%LOCALAPPDATA%` into a private copy (`AppData\Local\Packages\Claude_...\LocalCache`) that Task
   Scheduler and other programs can't see. The first install landed there and every task failed with
-  0x80070002. The database moved with it, to `%USERPROFILE%\FourSightoursight.db` (Roger's
+  0x80070002. The database moved with it, to `%USERPROFILE%\FourSight\foursight.db` (Roger's
   decision), so the CLI, the scheduled runs and the future MCP server all share one database.
 - **Tests:** JVM tests for the TikTok, YouTube, Facebook and Instagram clients, auth and collectors
   against doc-shaped fixtures, and the runner.
+
+## Step 4: CLI and MCP (November 22, 2026)
+
+- **Query services in core** (`core/.../query`), shared by the CLI and MCP and later the UI:
+  `videos`, `videoStats` (latest or day 7), `sevenDayReport` and `recentSevenDayReports`,
+  `accountSummary`, `trends`, `compare`, `freshness` with each platform's API limits, `definitions`,
+  `Exporter` (JSON and CSV) and `Matching` (suggestions). `QueryJson` is the one JSON shape: `foursight
+  ... --json` and the MCP tools return the same text.
+- **CLI:** `videos`, `stats`, `report`, `summary`, `trends`, `compare`, `status`, `definitions`,
+  `export`, `refresh` (the same as `collect`), `match` (suggest, `confirm`, `unlink`) and `mcp`, plus
+  `connect` and `collect` from step 3. `report` with no video prints the 7-day block for every video
+  that locked day 7 in the last 7 days (the Sunday review list).
+- **MCP server:** `foursight mcp`, stdio, official Kotlin MCP SDK 0.16.0. Tools `list_videos`,
+  `get_video_stats`, `get_seven_day_report`, `get_account_summary`, `get_trends`, `compare_videos`,
+  `get_freshness`, `get_metric_definitions`, `refresh` and `export`. All are marked read-only except
+  `refresh`. No tool posts, edits, deletes, changes matches or settings, or reads tokens. stdout
+  carries only the protocol (System.out is pointed at stderr while it runs; kotlin-logging's startup
+  line is turned off).
+- **Left for later, Roger's decision (November 22, 2026):** `audience` / `get_audience` (needs new
+  collection of demographics and traffic sources; its own piece after step 4), `obsidian` /
+  `write_obsidian_stats` (step 5) and `post` / `request_post` (step 8).
+- **Decisions, Roger's (November 22, 2026):**
+  - `summary --period` means growth during the period: each count gained is the latest capture
+    minus the last capture at or before the period start, summed over posts. A post published in
+    the period starts from 0. Older posts with no capture before the start are left out and counted,
+    never estimated. Data starts November 21, 2026, so longer periods say they're partial.
+  - Best and weakest: YouTube and Facebook rank by day-7 followers per 1,000; TikTok and Instagram,
+    which don't report followers per video, rank by day-7 shares per 1,000, labeled as a different
+    measure. Each platform is ranked on its own; two best and two weakest, as in the Playbook.
+- **Choices made here (simple defaults; say if you want them changed):** trends default to
+  followers and views over 28 days and cover counts only; a match suggestion needs posts within 48
+  hours on different platforms, scored half on publish-time closeness and half on caption word
+  overlap; a video can hold one post per platform; exports leave out the raw API responses (some hold
+  signed media URLs) and defuse cells a spreadsheet would run as a formula.
+- **Tried on the real database (read-only):** `summary`, `report`, `trends` and `match` ran on
+  Roger's data; `match` found the TikTok, Short and Reel of each recent video with high or medium
+  confidence. The MCP server answered `initialize`, `tools/list` and tool calls over stdio.
+- **Tests:** 19 core tests for the new queries (missing stays null, baselines, ranking measures,
+  gaps, matching, the 7-day block, export) and 11 desktop tests for the CLI and MCP (usage errors,
+  match events, identical CLI and MCP JSON, tool errors, no secrets in any tool output).
+- **Next:** with Roger's OK, add FourSight to the Claude app's MCP settings (outside the repo), then
+  reinstall so the installed `foursight` has the new commands.
 
 ## To verify live
 

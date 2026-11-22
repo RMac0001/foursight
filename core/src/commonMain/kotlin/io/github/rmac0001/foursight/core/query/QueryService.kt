@@ -61,7 +61,7 @@ data class SevenDayReport(
  * writes, so the MCP can call any of it safely.
  */
 class QueryService(
-    private val repo: Repository,
+    internal val repo: Repository,
 ) {
     fun definitions(): List<MetricDefinition> = Metrics.all
 

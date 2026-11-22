@@ -72,6 +72,11 @@ Notes from the references:
 | `engagement_rate` | (likes + comments + shares + saves) ÷ views × 100. Saves count only on platforms that report them, so the rate compares within one platform, not across platforms. |
 | `account_follower_change` | account followers at the later capture − at the earlier capture. Counts every follow in the window, whatever brought it in; never attributed to a post. |
 | `*_total` | sum of a count across the selected platforms. Missing if any platform's value is missing. |
+| `follower_change` | account followers at the latest capture − at the last capture at or before the period start (`summary`). |
+| `*_gained` | over a period, per platform: the sum over posts of (latest capture − last capture at or before the period start). A post published in the period starts from 0. A post with no capture before the start is left out and counted separately; nothing is estimated. Missing if a counted post lacks the value. |
+| trends | per platform and day, the day's latest capture from any device. Followers: the account's count. Post counts: the lifetime count summed over every post published before that day's capture; a day where such a post wasn't captured is a gap. Change: that day minus the day before. Counts only. |
+| ranking | each platform's posts with a day-7 lock, best two and weakest two. YouTube and Facebook by `followers_per_1k`; TikTok and Instagram by `shares_per_1k`, because they don't report followers per post (Roger's decision, November 22, 2026). Shown with the sample size and the posts not ranked yet. |
+| match score | 0.5 × (1 − publish-time gap ÷ 48 hours) + 0.5 × caption word overlap (shared words ÷ all words, words of 3+ letters). Suggestions only: nothing links until Roger confirms. |
 
 ## Day-7 lock
 

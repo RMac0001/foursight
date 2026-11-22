@@ -37,6 +37,9 @@ commits, test fixtures or logs.
 - `./gradlew check`: format check (Spotless + ktlint), all tests, Android lint. Run before committing.
 - `./gradlew spotlessApply`: fix formatting.
 - `./gradlew :core:desktopTest`: core unit tests on the JVM.
+- `./gradlew :desktopApp:test`: CLI and MCP server tests.
+- `./gradlew :desktopApp:cli --args="summary"`: run a CLI command from the checkout (`--args="mcp"`
+  runs the MCP server on stdio).
 - `./gradlew :desktopApp:run`: run the desktop app.
 - `./gradlew :desktopApp:packageMsi`: Windows installer (Windows only; CI builds it).
 - `./gradlew :androidApp:assembleDebug`: Android debug APK.

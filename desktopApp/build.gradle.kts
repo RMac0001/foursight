@@ -16,6 +16,10 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(libs.ktor.client.java)
     implementation(libs.ktor.client.core)
+    implementation(libs.mcp.kotlin.server)
+    runtimeOnly(libs.slf4j.nop)
+    implementation(libs.kotlinx.serialization.json)
+    testImplementation(libs.kotlin.test)
 }
 
 // Runs the CLI from a source checkout, for example: gradlew.bat :desktopApp:cli --args="connect tiktok".
