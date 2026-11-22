@@ -67,4 +67,13 @@ interface AppServices {
 
     /** The platform's fonts for the Microsoft 365 look and the brand wordmark; defaults when absent. */
     val fonts: BrandFonts get() = BrandFonts()
+
+    /** Whether this device signs in to the platforms and collects itself (Android does from step 7, part 2). */
+    val canCollect: Boolean get() = true
+
+    /** Whether this device has the Obsidian writer (Windows only, spec: Obsidian writer). */
+    val hasObsidian: Boolean get() = true
+
+    /** Merges other devices' files from Google Drive into this device (spec: Sync); returns a message. */
+    suspend fun syncNow(): String
 }
