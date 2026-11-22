@@ -157,6 +157,7 @@ class YouTubeTest {
         assertFalse("drive" in url.parameters["scope"]!!, "Google refuses YouTube and Drive in one consent")
         assertNull(url.parameters["include_granted_scopes"])
         assertEquals("/", auth.loopbackPath)
+        assertEquals("", auth.loopbackRedirectSuffix, "Google uses the bare loopback address")
     }
 
     @Test

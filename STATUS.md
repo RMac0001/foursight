@@ -10,7 +10,7 @@ step forward.
 | --- | --- |
 | 1. Setup (developer apps) | Done by Roger, November 21, 2026 (details in the vault spec's Setup status) |
 | 2. Core | Built and tested on branch `claude/step-2-core` (see below) |
-| 3. Collectors | In progress: TikTok, YouTube and Drive publish verified live; Facebook and Instagram next |
+| 3. Collectors | In progress: TikTok, YouTube, Facebook and Drive publish verified live; Instagram waits on the linked account |
 | 4. CLI and MCP | Not started |
 | 5. Obsidian writer | Not started |
 | 6. Windows UI | Not started (placeholder shell with the six sections) |
@@ -94,10 +94,24 @@ step forward.
   three days behind (`analytics_through` 2026-11-19 on November 22), and the newest video had no
   Analytics row yet, so its Analytics numbers are missing rather than zero. Still unconfirmed: 50
   ids per `videos.list` call (the channel has fewer than 50 public videos).
-- **Not yet:** the Facebook and Instagram collectors; the installed `foursight` console command and
-  the Task Scheduler commands for Roger to run.
-- **Tests:** 64 JVM tests (TikTok and YouTube clients, auth and collectors against doc-shaped
-  fixtures; runner).
+- **Meta** (built November 22, 2026): `foursight connect meta`, Facebook Login for Business with the
+  configuration id from Credential Manager, `http://localhost:<port>/` redirect (Meta adds the
+  trailing slash to a bare address and then rejects a code exchange without it). No PKCE in Meta's
+  flow, so the `state` check carries it. Short-lived to long-lived user token, then the Page token
+  from `/me/accounts`, which doesn't expire; only the Page token is stored. Graph API v27.0.
+- **Facebook** (verified live November 22, 2026): `/{page-id}/video_reels` and each Reel's lifetime
+  `video_insights`. `post_impressions_unique` is rejected as "not a valid insights metric" although
+  the reference still lists it, so Facebook reach is unavailable (definitions version 3).
+  `post_video_followers` is net (it came back -1 for one Reel). `pages_manage_engagement` turned out
+  not to be needed for reading insights.
+- **Instagram** (built, not verified): the Page's linked account is an old personal account with no
+  Reels, so the collector found none. Waiting on Roger to link the professional account he posts
+  Reels to. `ig_reels_avg_watch_time` is assumed to be milliseconds, like Facebook's; confirm on the
+  first run with Reels.
+- **Not yet:** the installed `foursight` console command and the Task Scheduler commands for Roger
+  to run.
+- **Tests:** JVM tests for the TikTok, YouTube, Facebook and Instagram clients, auth and collectors
+  against doc-shaped fixtures, and the runner.
 
 ## To verify live
 

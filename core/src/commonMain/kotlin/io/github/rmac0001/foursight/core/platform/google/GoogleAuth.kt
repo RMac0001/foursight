@@ -50,6 +50,7 @@ class GoogleAuth(
     override val displayName = grant.displayName
     override val platform = grant.platform
     override val loopbackPath = "/"
+    override val loopbackRedirectSuffix = ""
 
     /** Errors are reported under YouTube, the platform Google sign-in belongs to. */
     private val reportAs = SocialPlatform.YOUTUBE

@@ -6,6 +6,10 @@ import io.github.rmac0001.foursight.core.collect.CollectionRunner
 import io.github.rmac0001.foursight.core.collect.PlatformCollector
 import io.github.rmac0001.foursight.core.platform.google.GoogleAuth
 import io.github.rmac0001.foursight.core.platform.google.GoogleGrant
+import io.github.rmac0001.foursight.core.platform.meta.FacebookCollector
+import io.github.rmac0001.foursight.core.platform.meta.InstagramCollector
+import io.github.rmac0001.foursight.core.platform.meta.MetaAuth
+import io.github.rmac0001.foursight.core.platform.meta.MetaGraph
 import io.github.rmac0001.foursight.core.platform.tiktok.TikTokApi
 import io.github.rmac0001.foursight.core.platform.tiktok.TikTokAuth
 import io.github.rmac0001.foursight.core.platform.tiktok.TikTokCollector
@@ -42,16 +46,20 @@ class DesktopServices : AutoCloseable {
     private val tiktokAuth = TikTokAuth(tiktokApi, secrets)
     private val youtubeAuth = GoogleAuth(http, secrets, GoogleGrant.YOUTUBE)
     private val driveAuth = GoogleAuth(http, secrets, GoogleGrant.DRIVE)
+    private val metaGraph = MetaGraph(http)
+    private val metaAuth = MetaAuth(metaGraph, secrets)
 
     val collectors: List<PlatformCollector> =
         listOf(
             TikTokCollector(tiktokApi, tiktokAuth),
             YouTubeCollector(YouTubeApi(http), youtubeAuth),
+            FacebookCollector(metaGraph, metaAuth),
+            InstagramCollector(metaGraph, metaAuth),
         )
 
     /** Sign-ins by command-line name. Drive sync is its own Google sign-in. */
     val signInFlows: Map<String, SignInFlow> =
-        listOf(tiktokAuth, youtubeAuth, driveAuth).associateBy { it.connection }
+        listOf(tiktokAuth, youtubeAuth, driveAuth, metaAuth).associateBy { it.connection }
 
     private val sync = SyncEngine(DriveSyncStore(http, { driveAuth.accessToken(Clock.System.now()) }), repo, timeZone)
     private var deviceRegistered = false

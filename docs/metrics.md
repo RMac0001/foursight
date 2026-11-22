@@ -2,7 +2,7 @@
 
 How every number in FourSight is sourced and calculated. The code is the source of truth
 (`core/.../metrics/Metrics.kt` and `Calculations.kt`); a test checks that every metric id in the
-code appears in this file. Definitions version: **2**. Sources checked against each platform's live
+code appears in this file. Definitions version: **3**. Sources checked against each platform's live
 API reference on November 21, 2026 (YouTube rechecked November 22, 2026).
 
 **Rules that apply everywhere**
@@ -22,8 +22,8 @@ API reference on November 21, 2026 (YouTube rechecked November 22, 2026).
 | `comments` | count | `comment_count` | `statistics.commentCount` (Data API, current) | `post_video_social_actions` (comments) | `comments` |
 | `shares` | count | `share_count` | `shares` (Analytics) | `post_video_social_actions` (shares) | `shares` |
 | `saves` | count | not available | not available | not available | `saved` |
-| `followers_gained` | count | not available per post | `subscribersGained` (Analytics, video filter) | `post_video_followers` | not available for Reels |
-| `reach` | count | not available | not available | `post_impressions_unique` | `reach` |
+| `followers_gained` | count | not available per post | `subscribersGained` (Analytics, video filter) | `post_video_followers` (net, can be negative) | not available for Reels |
+| `reach` | count | not available | not available | not available (retired, see notes) | `reach` |
 | `watch_time_seconds` | duration | not available | `estimatedMinutesWatched` × 60 (Analytics) | `post_video_view_time` ÷ 1,000 | `ig_reels_video_view_total_time` |
 | `average_view_duration_seconds` | duration | not available | `averageViewDuration` (Analytics) | `post_video_avg_time_watched` ÷ 1,000 (includes replays) | `ig_reels_avg_watch_time` |
 | `average_view_percentage` | rate | not available | `averageViewPercentage` (Analytics) | retention graph only | not available |
@@ -39,6 +39,15 @@ Notes from the references:
   followers. `ig_reels_video_view_total_time`, `views` and `total_interactions` are marked "in
   development" by Meta.
 - **Facebook** Reels insights are lifetime totals only, so a Reel's past days can't be rebuilt.
+- **Facebook followers gained** is net: `post_video_followers` came back as -1 for one Reel on
+  November 22, 2026, so it's follows minus unfollows from the Reel, not new follows alone.
+- **Facebook reach** (definitions version 3): the Video Insights reference still lists
+  `post_impressions_unique`, but on November 22, 2026 the API rejected it as "not a valid insights
+  metric" (unique impressions were in Meta's June 15, 2026 cuts). Facebook reach is unavailable.
+- **Facebook likes, comments and shares** come from objects of counts per type
+  (`post_video_likes_by_reaction_type`, `post_video_social_actions`). Meta leaves out types with no
+  count (a Reel with one share and no comments returns `{"SHARE": 1}`), so a type missing from a
+  returned object is zero; if the metric itself is missing, the value is missing.
 - **TikTok** returns today's totals only, so a TikTok's past days can't be rebuilt.
 - **YouTube** is the only platform with per-day history per video.
 - **YouTube has two sources** (Roger's decision, November 22, 2026, definitions version 2). Views,

@@ -55,7 +55,7 @@ class Cli(
                 err.println("Can't sign in to \"$name\" yet. Available: $known")
                 return 1
             }
-        return LoopbackReceiver(flow.loopbackPath).use { receiver ->
+        return LoopbackReceiver(flow.loopbackPath, flow.loopbackHost, flow.loopbackRedirectSuffix).use { receiver ->
             try {
                 val request = flow.begin(receiver.redirectUri)
                 out.println("Opening ${flow.displayName} sign-in in your browser...")
@@ -152,7 +152,7 @@ class Cli(
         (if (code == 0) out else err).println(
             """
             Usage:
-              foursight connect <name>                 Sign in (opens the browser): tiktok, youtube, drive
+              foursight connect <name>                 Sign in (opens the browser): tiktok, youtube, drive, meta
               foursight collect [--platform <name>]    Collect today's numbers
               foursight collect --day7-due             Collect only platforms with a post due for day 7
             Platforms: tiktok, youtube, facebook, instagram
