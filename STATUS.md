@@ -11,7 +11,7 @@ step forward.
 | 1. Setup (developer apps) | Done by Roger, November 21, 2026 (details in the vault spec's Setup status) |
 | 2. Core | Built and tested on branch `claude/step-2-core` (see below) |
 | 3. Collectors | Done except Instagram's live check (no Reels on the linked account yet): TikTok, YouTube, Facebook, Drive publish, installed command and daily schedule verified live |
-| 4. CLI and MCP | Built and tested on branch `claude/step-4-cli-mcp`; audience, obsidian and post wait (see below). Claude isn't connected to the MCP server yet |
+| 4. CLI and MCP | Built and tested on branch `claude/step-4-cli-mcp`; audience added November 22, 2026; obsidian and post wait for steps 5 and 8. Connected to the Claude app |
 | 5. Obsidian writer | Not started |
 | 6. Windows UI | Not started (placeholder shell with the six sections) |
 | 7. Android | Not started (placeholder app showing the shared shell) |
@@ -164,6 +164,28 @@ step forward.
   match events, identical CLI and MCP JSON, tool errors, no secrets in any tool output).
 - **Next:** with Roger's OK, add FourSight to the Claude app's MCP settings (outside the repo), then
   reinstall so the installed `foursight` has the new commands.
+
+## Audience (November 22, 2026)
+
+- **Collected daily with each platform**, as AUDIENCE snapshots (one per breakdown; item id is the
+  breakdown id), so they sync and export like everything else. A failed breakdown is a warning; the
+  rest of the platform's run still counts.
+- **Checked live on Roger's accounts before building:**
+  - YouTube Analytics channel reports work: `viewerPercentage` by `ageGroup,gender`, `views` by
+    `insightTrafficSourceType`, and `views` by `country` (sorted, top 25). All cover the 28 days
+    ending on the last Analytics day.
+  - Facebook `page_follows_country` and `page_follows_city` (period `day`) work; FourSight keeps the
+    latest day. Page age and gender are retired (`page_fans_gender_age`, March 14, 2024), and the
+    per-Reel `post_video_view_time_by_age_bucket_and_gender` and `post_video_view_time_by_country_id`
+    both return code 1 ("An unknown error has occurred.").
+  - Instagram `follower_demographics` with `breakdown` age, gender and country, `period=lifetime`,
+    `metric_type=total_value` works. The `timeframe` parameter made no difference to follower
+    numbers (this_month, last_30_days and last_90_days returned the same); FourSight sends
+    `this_month`, which the docs keep.
+  - TikTok Personal has no audience data.
+- **`foursight audience [--platform] [--top 10]` and MCP `get_audience`.** Each breakdown shows
+  its unit, time window, source and capture time; counts also show a labeled share of the groups
+  listed (platforms list only their top groups).
 
 ## To verify live
 

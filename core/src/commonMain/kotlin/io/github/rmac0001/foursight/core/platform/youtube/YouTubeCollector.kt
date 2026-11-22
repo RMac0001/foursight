@@ -5,6 +5,7 @@ import io.github.rmac0001.foursight.core.collect.Collection
 import io.github.rmac0001.foursight.core.collect.CollectionException
 import io.github.rmac0001.foursight.core.collect.FailureKind
 import io.github.rmac0001.foursight.core.collect.PlatformCollector
+import io.github.rmac0001.foursight.core.metrics.AudienceBreakdown
 import io.github.rmac0001.foursight.core.metrics.Metrics
 import io.github.rmac0001.foursight.core.model.ContentType
 import io.github.rmac0001.foursight.core.model.ItemKind
@@ -20,6 +21,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -131,7 +133,88 @@ class YouTubeCollector(
                 }
             snapshots += snapshot(ItemKind.POST, id, raw, values)
         }
+        val through = analytics?.through
+        if (through == null) {
+            if (analytics != null) warnings += "YouTube audience skipped: Analytics has no recent days yet."
+        } else {
+            AudienceBreakdown.of(platform).forEach { b ->
+                try {
+                    val (raw, values) = audience(token, b, through)
+                    snapshots += snapshot(ItemKind.AUDIENCE, b.id, raw, values)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: CollectionException) {
+                    if (e.kind == FailureKind.SIGN_IN_EXPIRED) throw e
+                    warnings += "YouTube ${b.label.lowercase()} is missing this run: ${e.message}"
+                }
+            }
+        }
         return Collection(posts, snapshots, tokenExpiresAt = null, warnings = warnings)
+    }
+
+    /** One channel-level audience report over the 28 days ending [through]. */
+    private suspend fun audience(
+        token: String,
+        b: AudienceBreakdown,
+        through: LocalDate,
+    ): Pair<JsonObject, Map<String, Double?>> {
+        val start = through.minus(DatePeriod(days = AUDIENCE_DAYS - 1))
+        val table =
+            when (b) {
+                AudienceBreakdown.YOUTUBE_AGE_GENDER -> {
+                    api.report(token, start, through, listOf("viewerPercentage"), listOf("ageGroup", "gender"))
+                }
+
+                AudienceBreakdown.YOUTUBE_TRAFFIC -> {
+                    api.report(token, start, through, listOf("views"), listOf("insightTrafficSourceType"))
+                }
+
+                AudienceBreakdown.YOUTUBE_COUNTRY -> {
+                    api.report(
+                        token,
+                        start,
+                        through,
+                        listOf("views"),
+                        listOf("country"),
+                        sort = "-views",
+                        maxResults = 25,
+                    )
+                }
+
+                else -> {
+                    error("not a YouTube breakdown: $b")
+                }
+            }
+        val values =
+            table.rowMaps().associate { r ->
+                when (b) {
+                    AudienceBreakdown.YOUTUBE_AGE_GENDER -> {
+                        val age =
+                            r["ageGroup"]
+                                ?.content
+                                .orEmpty()
+                                .removePrefix("age")
+                                .replace(Regex("-$"), "+")
+                        "$age ${r["gender"]?.content.orEmpty()}" to r["viewerPercentage"]?.asDouble()
+                    }
+
+                    AudienceBreakdown.YOUTUBE_TRAFFIC -> {
+                        r["insightTrafficSourceType"]?.content.orEmpty() to r["views"]?.asDouble()
+                    }
+
+                    else -> {
+                        r["country"]?.content.orEmpty() to r["views"]?.asDouble()
+                    }
+                }
+            }
+        val raw =
+            buildJsonObject {
+                put("start", start.toString())
+                put("end", through.toString())
+                put("columns", JsonArray(table.columns.map { JsonPrimitive(it) }))
+                put("rows", JsonArray(table.rows.map { JsonArray(it) }))
+            }
+        return raw to values
     }
 
     private class Analytics(
@@ -204,6 +287,9 @@ class YouTubeCollector(
 
     companion object {
         private val PACIFIC = TimeZone.of("America/Los_Angeles")
+
+        /** Audience reports cover 28 days, matching YouTube Studio's default. */
+        const val AUDIENCE_DAYS = 28
 
         /** The "Top videos" report allows at most 200 rows and needs a sort. */
         private const val TOP_VIDEOS_MAX = 200

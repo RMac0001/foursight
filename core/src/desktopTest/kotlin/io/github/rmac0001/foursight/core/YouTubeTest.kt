@@ -127,6 +127,24 @@ class YouTubeTest {
                     respondJson(dailyJson)
                 }
 
+                r.url.parameters["dimensions"] == "ageGroup,gender" -> {
+                    respondJson(
+                        """{"columnHeaders":[{"name":"ageGroup"},{"name":"gender"},{"name":"viewerPercentage"}],
+                           "rows":[["age25-34","male",61.5],["age65-","female",38.5]]}""",
+                    )
+                }
+
+                r.url.parameters["dimensions"] == "insightTrafficSourceType" -> {
+                    respondJson(
+                        """{"columnHeaders":[{"name":"insightTrafficSourceType"},{"name":"views"}],
+                           "rows":[["SHORTS",900],["YT_SEARCH",40]]}""",
+                    )
+                }
+
+                r.url.parameters["dimensions"] == "country" -> {
+                    respondJson("""{"columnHeaders":[{"name":"country"},{"name":"views"}],"kind":"none"}""")
+                }
+
                 else -> {
                     respondJson(perVideoJson)
                 }
@@ -203,6 +221,31 @@ class YouTubeTest {
             )
             val none = GoogleAuth(client { respondJson("{}") }, secrets(refresh = null), GoogleGrant.YOUTUBE)
             assertEquals(FailureKind.NOT_CONNECTED, assertFailsWith<CollectionException> { none.accessToken(now) }.kind)
+        }
+
+    @Test
+    fun collectsAudienceOverThe28AnalyticsDays() =
+        runTest {
+            val requests = mutableListOf<HttpRequestData>()
+            val http = client(requests, youtubeRoutes())
+            val c =
+                YouTubeCollector(
+                    YouTubeApi(http),
+                    GoogleAuth(http, secrets(), GoogleGrant.YOUTUBE),
+                ).collect(now, "dev-1", day)
+            val audience = c.snapshots.filter { it.itemKind == ItemKind.AUDIENCE }.associateBy { it.itemId }
+            assertEquals(
+                mapOf("25-34 male" to 61.5, "65+ female" to 38.5),
+                audience.getValue("viewer_age_gender").values,
+            )
+            assertEquals(mapOf("SHORTS" to 900.0, "YT_SEARCH" to 40.0), audience.getValue("traffic_source").values)
+            assertTrue(audience.getValue("viewer_country").values.isEmpty(), "no rows stays empty, never zeros")
+            val demo = requests.single { it.url.parameters["dimensions"] == "ageGroup,gender" }
+            assertEquals("2026-11-20", demo.url.parameters["endDate"], "ends on the last Analytics day")
+            assertEquals("2026-10-24", demo.url.parameters["startDate"])
+            val country = requests.single { it.url.parameters["dimensions"] == "country" }
+            assertEquals("-views", country.url.parameters["sort"])
+            assertEquals("25", country.url.parameters["maxResults"])
         }
 
     @Test

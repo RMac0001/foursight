@@ -8,7 +8,7 @@ tags:
   - social-media
 title: FourSight Spec
 type: project
-updated: '2026-11-21'
+updated: '2026-11-22'
 ---
 # FourSight: Spec
 
@@ -16,7 +16,7 @@ updated: '2026-11-21'
 > status section, account and app IDs and vault paths, because the repo is public. When the
 > master changes, recopy it here; don't edit this file on its own.
 
-*Roger's personal creator-analytics and posting app for One Fat Man's Journey. This note is the source of truth: Claude writes and maintains the spec here (with Roger's approval), and Claude Code builds from it. Replaces the November 21 Creator Stats plan. Last revised November 21, 2026.*
+*Roger's personal creator-analytics and posting app for One Fat Man's Journey. This note is the source of truth: Claude writes and maintains the spec here (with Roger's approval), and Claude Code builds from it. Replaces the November 21 Creator Stats plan. Last revised November 22, 2026.*
 
 ## Decisions locked
 
@@ -114,10 +114,11 @@ Google Drive: /FourSight/
 - On day 7, the app freezes a snapshot. That's the Playbook's 7-day log (R7.2), with per-1,000 math (saves, shares, followers).
 
 ### Overview (includes trends)
-- Totals per platform, followers over time, best and weakest videos by followers per 1,000 (the Playbook's scoreboard), and trend charts.
+- Totals per platform, followers over time, best and weakest videos by followers per 1,000 (the Playbook's scoreboard), and trend charts. Only YouTube and Facebook report follows per video, so TikTok and Instagram videos rank by day-7 shares per 1,000 instead, labeled as a different measure (decided November 22, 2026).
 - **Date filters:** Today, Yesterday, Last 7, Last 28, Last 90, Custom range, All history. (28 instead of 30, to match YouTube's and TikTok's own analytics.)
 - **Platform filters:** all, any single platform, or any combination.
 - **Combining rules:** counts (views, likes, comments, shares, followers) can be summed across platforms. Rates and durations (average view duration, retention, engagement rate) are never summed or averaged across platforms; they're shown per platform. The UI marks which is which.
+- **Period totals:** a period's totals are growth during the period: each post's latest capture minus its last capture at or before the period start, summed. A post published in the period starts from 0. Older posts with no capture from before the start are left out and counted, never estimated (decided November 22, 2026).
 - Interactive charts: tap or hover any point to see its value, date, source and capture time.
 
 ### Comparisons and indicators
@@ -135,7 +136,7 @@ Google Drive: /FourSight/
 - Per platform, the app shows whether posting is fully live or limited (private-only, drafts only, awaiting review) and never hides the limit.
 
 ### Obsidian writer (Windows)
-- After the day-7 lock, writes the `## 7-day numbers` block into the video note, updates the stats fields in its frontmatter (`views_tiktok`, `views_shorts`, `views_reels`, `views_instagram`, `followers_per_1k`...), and regenerates the vault's Stats Overview note.
+- After the day-7 lock, writes the `## 7-day numbers` block into the video note, updates the stats fields in its frontmatter (`views_tiktok`, `views_shorts`, `views_reels`, `views_instagram`, `followers_per_1k`...), and regenerates the vault's Stats Overview note (its path is a setting).
 - It touches only the fields, the block and the one note it owns. Re-running it rewrites the same values.
 
 ### Android widget
@@ -158,7 +159,7 @@ Both run without the dashboard open, use the same database and query services, r
 | --- | --- | --- |
 | `list_videos` | `foursight videos [--platform] [--since]` | Every video, grouped across platforms |
 | `get_video_stats` | `foursight stats <video> [--day 7]` | One video's numbers, live or at a given day |
-| `get_seven_day_report` | `foursight report <video>` | The Playbook's 7-day block, ready to paste |
+| `get_seven_day_report` | `foursight report [<video>]` | The Playbook's 7-day block, ready to paste; with no video, every video that reached day 7 in the last week |
 | `get_account_summary` | `foursight summary [--period 28d]` | Followers, totals, best and weakest videos |
 | `get_trends` | `foursight trends [--days 28] [--metric]` | Trends over time |
 | `compare_videos` | `foursight compare <a> <b> [--metric]` | Side by side |
@@ -171,6 +172,7 @@ Both run without the dashboard open, use the same database and query services, r
 | `request_post` | `foursight post ...` | Creates a pending post; Roger confirms it in the app |
 | | `foursight connect <platform>` | Sign in to a platform (opens the browser) |
 | | `foursight collect` | The daily collection run (used by Task Scheduler) |
+| | `foursight match [confirm \| unlink]` | Suggests cross-platform matches; Roger confirms or undoes them (not in the MCP) |
 
 **The MCP cannot:** publish without in-app confirmation, delete or edit posts, change account or app settings, modify stored metrics, or read tokens. It can only change local data through `refresh` (the normal collector) and the vault through `write_obsidian_stats`.
 

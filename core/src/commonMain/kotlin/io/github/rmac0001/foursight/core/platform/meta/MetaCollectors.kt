@@ -5,6 +5,7 @@ import io.github.rmac0001.foursight.core.collect.Collection
 import io.github.rmac0001.foursight.core.collect.CollectionException
 import io.github.rmac0001.foursight.core.collect.FailureKind
 import io.github.rmac0001.foursight.core.collect.PlatformCollector
+import io.github.rmac0001.foursight.core.metrics.AudienceBreakdown
 import io.github.rmac0001.foursight.core.metrics.Metrics
 import io.github.rmac0001.foursight.core.model.ContentType
 import io.github.rmac0001.foursight.core.model.ItemKind
@@ -12,8 +13,10 @@ import io.github.rmac0001.foursight.core.model.PlatformPost
 import io.github.rmac0001.foursight.core.model.Snapshot
 import kotlinx.coroutines.CancellationException
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlin.math.roundToLong
@@ -162,10 +165,50 @@ class FacebookCollector(
                 }
             snapshots += snapshot(ItemKind.POST, id, raw, values)
         }
+        AudienceBreakdown.of(platform).forEach { b ->
+            try {
+                val body =
+                    graph.get(
+                        platform,
+                        b.label,
+                        "$pageId/insights",
+                        token,
+                        mapOf(
+                            "metric" to b.metricName(),
+                            "period" to "day",
+                        ),
+                    )
+                snapshots += snapshot(ItemKind.AUDIENCE, b.id, body, pageBreakdown(body))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: CollectionException) {
+                if (e.kind == FailureKind.SIGN_IN_EXPIRED || e.kind == FailureKind.RATE_LIMITED) throw e
+                warnings += "Facebook ${b.label.lowercase()} is missing this run: ${e.message}"
+            }
+        }
         return Collection(posts, snapshots, warnings = warnings)
     }
 
+    private fun AudienceBreakdown.metricName(): String =
+        when (this) {
+            AudienceBreakdown.FACEBOOK_FOLLOWER_COUNTRY -> "page_follows_country"
+            AudienceBreakdown.FACEBOOK_FOLLOWER_CITY -> "page_follows_city"
+            else -> error("not a Facebook breakdown: $this")
+        }
+
     companion object {
+        /** The latest day's value object of a Page Insights breakdown metric: group to count. */
+        internal fun pageBreakdown(body: JsonObject): Map<String, Double?> {
+            val latest =
+                body
+                    .list("data")
+                    .firstOrNull()
+                    ?.list("values")
+                    ?.lastOrNull()
+                    ?.obj("value") ?: return emptyMap()
+            return latest.mapValues { (_, v) -> v.number() }
+        }
+
         const val REEL_FIELDS = "id,description,title,created_time,updated_time,length,permalink_url,picture"
         val REEL_METRICS =
             listOf(
@@ -297,8 +340,40 @@ class InstagramCollector(
                 }
             snapshots += snapshot(ItemKind.POST, id, raw, values)
         }
+        AudienceBreakdown.of(platform).forEach { b ->
+            try {
+                val body =
+                    graph.get(
+                        platform,
+                        b.label,
+                        "$igId/insights",
+                        token,
+                        mapOf(
+                            "metric" to "follower_demographics",
+                            "period" to "lifetime",
+                            "timeframe" to "this_month",
+                            "breakdown" to b.breakdownName(),
+                            "metric_type" to "total_value",
+                        ),
+                    )
+                snapshots += snapshot(ItemKind.AUDIENCE, b.id, body, demographics(body))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: CollectionException) {
+                if (e.kind == FailureKind.SIGN_IN_EXPIRED || e.kind == FailureKind.RATE_LIMITED) throw e
+                warnings += "Instagram ${b.label.lowercase()} is missing this run: ${e.message}"
+            }
+        }
         return Collection(posts, snapshots, warnings = warnings)
     }
+
+    private fun AudienceBreakdown.breakdownName(): String =
+        when (this) {
+            AudienceBreakdown.INSTAGRAM_FOLLOWER_AGE -> "age"
+            AudienceBreakdown.INSTAGRAM_FOLLOWER_GENDER -> "gender"
+            AudienceBreakdown.INSTAGRAM_FOLLOWER_COUNTRY -> "country"
+            else -> error("not an Instagram breakdown: $this")
+        }
 
     companion object {
         const val MEDIA_FIELDS = "id,caption,media_type,media_product_type,timestamp,permalink,thumbnail_url"
@@ -316,4 +391,28 @@ class InstagramCollector(
                 "reels_skip_rate",
             ).joinToString(",")
     }
+}
+
+/**
+ * An IG User demographics response (`total_value.breakdowns[0].results`): group to count. Meta
+ * returns an empty set rather than zeros when there isn't enough data, so that stays empty.
+ */
+internal fun demographics(body: JsonObject): Map<String, Double?> {
+    val results =
+        body
+            .list("data")
+            .firstOrNull()
+            ?.obj("total_value")
+            ?.list("breakdowns")
+            ?.firstOrNull()
+            ?.list("results")
+            .orEmpty()
+    return results
+        .mapNotNull { r ->
+            val key =
+                (r["dimension_values"] as? JsonArray)
+                    ?.joinToString(" ") { (it as? JsonPrimitive)?.content.orEmpty() }
+                    ?.takeIf { it.isNotBlank() }
+            key?.let { it to r["value"]?.number() }
+        }.toMap()
 }

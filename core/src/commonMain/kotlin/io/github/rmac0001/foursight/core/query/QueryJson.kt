@@ -1,6 +1,7 @@
 package io.github.rmac0001.foursight.core.query
 
 import io.github.rmac0001.foursight.core.SocialPlatform
+import io.github.rmac0001.foursight.core.metrics.AudienceBreakdown
 import io.github.rmac0001.foursight.core.metrics.Availability
 import io.github.rmac0001.foursight.core.metrics.Calculations
 import io.github.rmac0001.foursight.core.metrics.Computed
@@ -332,6 +333,20 @@ object QueryJson {
                     )
                 }
             }
+            putJsonArray("audience") {
+                AudienceBreakdown.entries.forEach { b ->
+                    add(
+                        buildJsonObject {
+                            put("platform", b.platform.name.lowercase())
+                            put("id", b.id)
+                            put("label", b.label)
+                            put("unit", b.unit)
+                            put("window", b.window)
+                            put("source", b.source)
+                        },
+                    )
+                }
+            }
             putJsonArray("computed") {
                 computedDefinitions.forEach { (id, text) ->
                     add(
@@ -342,6 +357,51 @@ object QueryJson {
                     )
                 }
             }
+        }
+
+    fun audience(r: AudienceReport): JsonObject =
+        buildJsonObject {
+            putJsonArray("platforms") {
+                r.platforms.forEach { p ->
+                    add(
+                        buildJsonObject {
+                            put("platform", p.platform.name.lowercase())
+                            putJsonArray("breakdowns") {
+                                p.breakdowns.forEach { v ->
+                                    add(
+                                        buildJsonObject {
+                                            put("id", v.breakdown.id)
+                                            put("label", v.breakdown.label)
+                                            put("unit", v.breakdown.unit)
+                                            put("window", v.breakdown.window)
+                                            put("source", v.breakdown.source)
+                                            putInstant("captured_at", v.capturedAt)
+                                            v.missingReason?.let { put("missing_reason", it) }
+                                            putJsonArray("groups") {
+                                                v.groups.forEach { g ->
+                                                    add(
+                                                        buildJsonObject {
+                                                            put("group", g.group)
+                                                            put("value", num(g.value))
+                                                            if (g.shareOfListed != null) {
+                                                                put("share_of_listed_percent", g.shareOfListed)
+                                                            }
+                                                        },
+                                                    )
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
+                            }
+                            putJsonArray("not_available") { p.notAvailable.forEach { add(JsonPrimitive(it)) } }
+                        },
+                    )
+                }
+            }
+            put("share_of_listed_definition", SHARE_OF_LISTED_DEFINITION)
+            putInstant("generated_at", r.generatedAt)
+            put("definitions_version", Metrics.DEFINITIONS_VERSION)
         }
 
     /** Definitions of the numbers computed from the stored metrics. */
@@ -356,6 +416,7 @@ object QueryJson {
             "*_gained (summary)" to GAINED_DEFINITION,
             "trends" to TREND_DEFINITION,
             "match score" to Matching.DEFINITION,
+            "audience share_of_listed" to SHARE_OF_LISTED_DEFINITION,
             "day-7 lock" to
                 "The first capture at least 7 × 24 hours after publishing, no later than day 8.0; its exact age " +
                 "is kept.",
