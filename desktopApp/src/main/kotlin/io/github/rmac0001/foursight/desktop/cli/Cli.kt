@@ -28,6 +28,9 @@ import io.github.rmac0001.foursight.core.sync.MatchEvents
 import io.github.rmac0001.foursight.desktop.DesktopServices
 import io.github.rmac0001.foursight.desktop.auth.LoopbackReceiver
 import io.github.rmac0001.foursight.desktop.mcp.FourSightMcp
+import io.github.rmac0001.foursight.desktop.obsidian.NoteOutcome
+import io.github.rmac0001.foursight.desktop.obsidian.ObsidianSettings
+import io.github.rmac0001.foursight.desktop.obsidian.WriteReport
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
@@ -97,6 +100,10 @@ class Cli(
 
                 "audience" -> {
                     withServices { audience(it, rest) }
+                }
+
+                "obsidian" -> {
+                    withServices { obsidian(it, rest) }
                 }
 
                 "definitions" -> {
@@ -527,7 +534,92 @@ class Cli(
             return 0
         }
         results.forEach(::report)
+        if (results.any { it.ok }) writeVault(services)
         return if (results.all { it.ok }) 0 else 1
+    }
+
+    /** The automatic vault write after a collection. Problems are reported, never fatal. */
+    private fun writeVault(s: DesktopServices) {
+        val report =
+            try {
+                s.afterCollection(clock()) ?: return
+            } catch (e: Exception) {
+                err.println("Obsidian: not written (${e::class.simpleName})")
+                return
+            }
+        printVault(report)
+    }
+
+    private fun printVault(r: WriteReport) {
+        val written = r.notes.filter { it.outcome == NoteOutcome.WRITTEN }
+        out.println("Obsidian: ${written.size} notes written, Stats Overview ${r.overview}")
+        written.forEach { out.println("  wrote ${it.note.name}" + (it.detail?.let { d -> " ($d)" } ?: "")) }
+        r.errors.forEach { err.println("  $it") }
+    }
+
+    private fun obsidian(
+        s: DesktopServices,
+        args: List<String>,
+    ): Int {
+        val a = Args.parse(args, valued = setOf("vault", "notes", "overview"), switches = setOf("dry-run"))
+        if (a.positional.firstOrNull() == "setup") {
+            val vault = a.option("vault") ?: throw Args.UsageError("Usage: foursight obsidian setup --vault <folder>")
+            val dir = File(vault)
+            if (!dir.isDirectory || !File(dir, ".obsidian").isDirectory) {
+                err.println("$vault isn't an Obsidian vault (no .obsidian folder inside).")
+                return 1
+            }
+            s.repo.putSetting(ObsidianSettings.VAULT, dir.absolutePath)
+            a.option("notes")?.let { s.repo.putSetting(ObsidianSettings.NOTES, it) }
+            a.option("overview")?.let { s.repo.putSetting(ObsidianSettings.OVERVIEW, it) }
+            val settings = ObsidianSettings.load(s.repo)!!
+            out.println("Vault set. Video notes: ${settings.notesFolder}. Stats Overview: ${settings.overviewNote}.")
+            out.println(
+                "FourSight now writes them after each collection; run: foursight obsidian --dry-run to preview.",
+            )
+            return 0
+        }
+        val writer =
+            s.obsidian() ?: run {
+                err.println("Set up the vault first: foursight obsidian setup --vault <folder>")
+                return 1
+            }
+        val dry = a.flag("dry-run")
+        val now = clock()
+        val key = a.positional.singleOrNull()
+        if (key == null) {
+            val r = writer.writeAll(now, dry)
+            if (dry) out.println("Dry run: nothing written.")
+            r.notes.forEach {
+                out.println(
+                    "${it.note.name}: ${it.outcome.label}" +
+                        (it.detail?.let { d -> " ($d)" } ?: ""),
+                )
+            }
+            out.println("Stats Overview: ${r.overview}")
+            r.errors.forEach { err.println(it) }
+            if (r.notes.isEmpty()) {
+                out.println(
+                    "No video note has a tiktok_id, youtube_id, facebook_id or instagram_id yet.",
+                )
+            }
+            return if (r.errors.isEmpty()) 0 else 1
+        }
+        val note =
+            writer.notes().firstOrNull {
+                it.name.equals(key, ignoreCase = true) ||
+                    it.refs.any { r -> r.toString() == key }
+            }
+                ?: run {
+                    err.println("No video note named \"$key\" with post ids (see: foursight obsidian --dry-run).")
+                    return 1
+                }
+        val r = writer.write(note, now, dry)
+        out.println(
+            "${note.name}: ${r.outcome.label}" + (r.detail?.let { " ($it)" } ?: ""),
+        )
+        if (!dry) out.println("Stats Overview: ${writer.writeOverview(writer.notes(), now)}")
+        return 0
     }
 
     private fun report(r: PlatformRunResult) {
@@ -561,6 +653,8 @@ class Cli(
               match                                          Suggested cross-platform matches
               match confirm <post> <post>... [--video <id>]  Link posts as one video
               match unlink <post>                            Undo a link
+              obsidian [<note>] [--dry-run]                  Write the 7-day block and stats fields to the vault
+              obsidian setup --vault <folder>                Tell FourSight where the vault is
               connect <name>                                 Sign in: tiktok, youtube, drive, meta
               mcp                                            Run the MCP server for Claude (stdio)
 

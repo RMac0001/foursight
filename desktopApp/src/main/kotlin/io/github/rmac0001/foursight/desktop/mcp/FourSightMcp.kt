@@ -17,6 +17,7 @@ import io.github.rmac0001.foursight.core.query.trends
 import io.github.rmac0001.foursight.core.query.videoStats
 import io.github.rmac0001.foursight.core.query.videos
 import io.github.rmac0001.foursight.desktop.DesktopServices
+import io.github.rmac0001.foursight.desktop.obsidian.WriteReport
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
@@ -331,6 +332,16 @@ class FourSightMcp(
             ) { args ->
                 val only = if (args["platforms"] == null && args["platform"] == null) null else args.platforms()
                 val results = services.runner.run(only)
+                val vault =
+                    if (results.any { it.ok }) {
+                        runCatching {
+                            services.afterCollection(
+                                clock(),
+                            )
+                        }.getOrNull()
+                    } else {
+                        null
+                    }
                 buildJsonObject {
                     putJsonArray("platforms") {
                         results.forEach { r ->
@@ -351,7 +362,44 @@ class FourSightMcp(
                             )
                         }
                     }
+                    vault?.let { put("obsidian", vaultJson(it)) }
                     put("finished_at", clock().toString())
+                }
+            },
+            ToolSpec(
+                "write_obsidian_stats",
+                "Write Obsidian stats",
+                "Writes the 7-day block and the stats fields into a video's note in Roger's vault, and regenerates " +
+                    "the Stats Overview note. Only notes with a post id in their frontmatter (tiktok_id, youtube_id, " +
+                    "facebook_id, instagram_id) are touched, only FourSight's own fields and block, and Roger's " +
+                    "lines in the block are kept. With no video, writes every note that has day-7 numbers. It also " +
+                    "runs on its own after each collection.",
+                buildJsonObject {
+                    put("video", prop("string", "A note name, or a post such as tiktok:7301234567. Leave out for all."))
+                    put("dry_run", prop("boolean", "Report what would change without writing."))
+                },
+                emptyList(),
+                readOnly = false,
+            ) { args ->
+                val writer =
+                    services.obsidian()
+                        ?: throw ToolError(
+                            "The vault isn't set up. Roger runs: foursight obsidian setup --vault <folder>",
+                        )
+                val dry = (args["dry_run"] as? JsonPrimitive)?.content == "true"
+                val key = args.string("video")
+                if (key == null) {
+                    vaultJson(writer.writeAll(clock(), dry))
+                } else {
+                    val note =
+                        writer.notes().firstOrNull {
+                            it.name.equals(key, ignoreCase = true) ||
+                                it.refs.any { r -> r.toString() == key }
+                        }
+                            ?: throw ToolError("No video note named \"$key\" has post ids.")
+                    val r = writer.write(note, clock(), dry)
+                    val overview = if (dry) "not written (dry run)" else writer.writeOverview(writer.notes(), clock())
+                    vaultJson(WriteReport(listOf(r), overview, emptyList()))
                 }
             },
             ToolSpec(
@@ -373,6 +421,23 @@ class FourSightMcp(
                 }
             },
         )
+
+    private fun vaultJson(r: WriteReport): JsonObject =
+        buildJsonObject {
+            putJsonArray("notes") {
+                r.notes.forEach { n ->
+                    add(
+                        buildJsonObject {
+                            put("note", n.note.name)
+                            put("outcome", n.outcome.name.lowercase())
+                            n.detail?.let { put("detail", it) }
+                        },
+                    )
+                }
+            }
+            put("stats_overview", r.overview)
+            if (r.errors.isNotEmpty()) putJsonArray("errors") { r.errors.forEach { add(JsonPrimitive(it)) } }
+        }
 
     /** Runs one tool by name: the path both the server and the tests use. */
     suspend fun call(

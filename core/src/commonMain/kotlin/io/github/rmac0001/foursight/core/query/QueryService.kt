@@ -11,6 +11,7 @@ import io.github.rmac0001.foursight.core.metrics.Metrics
 import io.github.rmac0001.foursight.core.model.ItemKind
 import io.github.rmac0001.foursight.core.model.PlatformPost
 import io.github.rmac0001.foursight.core.model.PostRef
+import io.github.rmac0001.foursight.core.model.Snapshot
 import io.github.rmac0001.foursight.core.model.Video
 import io.github.rmac0001.foursight.core.store.ConnectionStatus
 import io.github.rmac0001.foursight.core.store.Repository
@@ -179,4 +180,7 @@ class QueryService(
     }
 
     fun findPost(ref: PostRef): PlatformPost? = repo.post(ref)
+
+    /** The latest account capture on a platform (followers), or null before the first collection. */
+    fun latestAccount(platform: SocialPlatform): Snapshot? = repo.accountSnapshots(platform).lastOrNull()
 }

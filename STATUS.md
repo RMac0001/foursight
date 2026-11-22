@@ -12,7 +12,7 @@ step forward.
 | 2. Core | Built and tested on branch `claude/step-2-core` (see below) |
 | 3. Collectors | Done except Instagram's live check (no Reels on the linked account yet): TikTok, YouTube, Facebook, Drive publish, installed command and daily schedule verified live |
 | 4. CLI and MCP | Built and tested on branch `claude/step-4-cli-mcp`; audience added November 22, 2026; obsidian and post wait for steps 5 and 8. Connected to the Claude app |
-| 5. Obsidian writer | Not started |
+| 5. Obsidian writer | Built and tested on branch `claude/step-5-obsidian`; vault set on Roger's PC; waits for notes with post ids |
 | 6. Windows UI | Not started (placeholder shell with the six sections) |
 | 7. Android | Not started (placeholder app showing the shared shell) |
 | 8. Posting | Not started |
@@ -186,6 +186,30 @@ step forward.
 - **`foursight audience [--platform] [--top 10]` and MCP `get_audience`.** Each breakdown shows
   its unit, time window, source and capture time; counts also show a labeled share of the groups
   listed (platforms list only their top groups).
+
+## Step 5: Obsidian writer (November 22, 2026)
+
+- **What it touches:** only video notes with a post id in their frontmatter (`tiktok_id`,
+  `youtube_id`, `facebook_id`, `instagram_id`), and in them only FourSight's stats fields and the
+  `## 7-day numbers` block; plus the Stats Overview note, which it owns. It refuses to replace a
+  Stats Overview it didn't write (it looks for its marker line). Writes are atomic and idempotent:
+  a second run with the same numbers changes nothing.
+- **Decisions, Roger's (November 22, 2026):**
+  - Post ids are added when a video is posted, by Roger or by Claude; FourSight doesn't guess which
+    note is which video.
+  - One field per platform, nothing combined: `views_<p>`, `shares_per_1k_<p>`,
+    `followers_per_1k_<p>` (YouTube and Facebook only) for p in tiktok, shorts, reels,
+    instagram, plus `stats_day7_date`. A missing number is an empty field, never 0.
+  - Writes automatically after each collection (the hourly day-7 check usually does it), and on
+    demand with `foursight obsidian [<note>]` or the MCP tool `write_obsidian_stats`.
+  - Roger's block lines (where viewers stopped, comments with substance, the lesson) are kept
+    when he has filled them in, and so is any other line he adds to the block.
+- **Settings** (local database only, never in the repo): `foursight obsidian setup --vault
+  <folder> [--notes <folder>] [--overview <note>]`. Defaults: notes in `Social Media Content`,
+  overview at `Social Media Content/Stats Overview.md`. Set on Roger's PC November 22, 2026.
+- **Tests:** 6 desktop tests on a throwaway vault: fields and block written, Roger's lines and
+  other sections untouched, a second run changes nothing, notes without ids or day-7 numbers
+  left alone, a hand-made Stats Overview never replaced, and CRLF notes keep their line endings.
 
 ## To verify live
 

@@ -22,6 +22,9 @@ import io.github.rmac0001.foursight.core.store.DesktopDatabase
 import io.github.rmac0001.foursight.core.store.Repository
 import io.github.rmac0001.foursight.core.sync.DriveSyncStore
 import io.github.rmac0001.foursight.core.sync.SyncEngine
+import io.github.rmac0001.foursight.desktop.obsidian.ObsidianSettings
+import io.github.rmac0001.foursight.desktop.obsidian.ObsidianWriter
+import io.github.rmac0001.foursight.desktop.obsidian.WriteReport
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.java.Java
 import io.ktor.client.plugins.HttpTimeout
@@ -89,6 +92,15 @@ class DesktopServices(
     }
 
     val runner = CollectionRunner(repo, collectors, timeZone, { Clock.System.now() }, ::publish)
+
+    /** The Obsidian writer, once `foursight obsidian setup` has named the vault; null before that. */
+    fun obsidian(): ObsidianWriter? = ObsidianSettings.load(repo)?.let { ObsidianWriter(queries, it, timeZone) }
+
+    /**
+     * After a collection: write the vault (spec: Obsidian writer, "after the day-7 lock"). Only
+     * when the vault is set up; a vault problem never fails the collection.
+     */
+    fun afterCollection(now: kotlin.time.Instant): WriteReport? = obsidian()?.writeAll(now)
 
     override fun close() = http.close()
 }
