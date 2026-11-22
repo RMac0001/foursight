@@ -186,7 +186,7 @@ object QueryJson {
 
     fun summary(s: AccountSummary): JsonObject =
         buildJsonObject {
-            put("period", s.period.label)
+            put("period", s.label)
             putInstant("start", s.start)
             putInstant("end", s.end)
             putInstant("data_starts_at", s.dataStartsAt)

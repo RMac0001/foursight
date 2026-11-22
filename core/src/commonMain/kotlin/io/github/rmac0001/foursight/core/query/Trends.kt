@@ -61,9 +61,22 @@ fun QueryService.trends(
     platforms: Set<SocialPlatform> = SocialPlatform.entries.toSet(),
 ): Trends {
     require(days in 1..3650) { "days must be between 1 and 3650" }
-    metrics.forEach { require(it.kind == MetricKind.COUNT && it in trendMetrics) { "${it.id} can't be trended." } }
     val to = now.toLocalDateTime(timeZone).date
-    val from = to.minus(days - 1, DateTimeUnit.DAY)
+    return trendsBetween(to.minus(days - 1, DateTimeUnit.DAY), to, metrics, now, platforms)
+}
+
+/** Daily trends for the days [from] to [to], inclusive (the app's custom ranges). */
+fun QueryService.trendsBetween(
+    from: LocalDate,
+    to: LocalDate,
+    metrics: List<MetricDefinition>,
+    now: Instant,
+    platforms: Set<SocialPlatform> = SocialPlatform.entries.toSet(),
+): Trends {
+    require(from <= to) { "the range starts after it ends" }
+    metrics.forEach { require(it.kind == MetricKind.COUNT && it in trendMetrics) { "${it.id} can't be trended." } }
+    val days = (to.toEpochDays() - from.toEpochDays() + 1).toInt()
+    require(days <= 3650) { "the range is longer than 3650 days" }
     val dayList = generateSequence(from) { it.plus(1, DateTimeUnit.DAY) }.takeWhile { it <= to }.toList()
     val series =
         SocialPlatform.entries.filter { it in platforms }.flatMap { platform ->

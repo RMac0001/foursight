@@ -7,6 +7,7 @@ import io.github.rmac0001.foursight.core.SocialPlatform.TIKTOK
 import io.github.rmac0001.foursight.core.SocialPlatform.YOUTUBE
 import io.github.rmac0001.foursight.core.metrics.Metrics
 import io.github.rmac0001.foursight.core.model.ItemKind
+import io.github.rmac0001.foursight.core.query.Day7Measure
 import io.github.rmac0001.foursight.core.query.Exporter
 import io.github.rmac0001.foursight.core.query.Format
 import io.github.rmac0001.foursight.core.query.MatchConfidence
@@ -17,9 +18,13 @@ import io.github.rmac0001.foursight.core.query.QueryService
 import io.github.rmac0001.foursight.core.query.SevenDayBlock
 import io.github.rmac0001.foursight.core.query.StatsBasis
 import io.github.rmac0001.foursight.core.query.accountSummary
+import io.github.rmac0001.foursight.core.query.accountSummaryBetween
 import io.github.rmac0001.foursight.core.query.compare
+import io.github.rmac0001.foursight.core.query.postHistory
 import io.github.rmac0001.foursight.core.query.recentSevenDayReports
 import io.github.rmac0001.foursight.core.query.trends
+import io.github.rmac0001.foursight.core.query.trendsBetween
+import io.github.rmac0001.foursight.core.query.versusAverage
 import io.github.rmac0001.foursight.core.query.videoStats
 import io.github.rmac0001.foursight.core.query.videos
 import io.github.rmac0001.foursight.core.sync.MatchEvents
@@ -399,5 +404,73 @@ class AnalyticsTest {
         assertEquals("+12", Format.signed(12.0))
         assertEquals("0", Format.signed(0.2))
         assertEquals("1:05", Format.duration(65.0))
+    }
+
+    @Test
+    fun summaryBetweenUsesTheRangeEndNotNow() {
+        seed()
+        // The range ends at day 8: the day-9 captures are after it and don't count.
+        val s = queries.accountSummaryBetween(published + 7.days, published + 8.days, "fixture range")
+        val t = s.platforms.single { it.platform == TIKTOK }
+        assertEquals("fixture range", s.label)
+        assertEquals(1060.0, t.followers)
+        assertEquals(3000.0, t.gained.single { it.id == "views_gained" }.value)
+    }
+
+    @Test
+    fun trendsBetweenCoverExactlyTheDays() {
+        seed()
+        val t =
+            queries.trendsBetween(
+                LocalDate.parse("2026-11-08"),
+                LocalDate.parse("2026-11-10"),
+                listOf(Metrics.FOLLOWERS),
+                now,
+                setOf(TIKTOK),
+            )
+        assertEquals(
+            listOf("2026-11-08", "2026-11-09", "2026-11-10"),
+            t.series
+                .single()
+                .points
+                .map { it.day.toString() },
+        )
+        assertFailsWith<IllegalArgumentException> {
+            queries.trendsBetween(
+                LocalDate.parse("2026-11-10"),
+                LocalDate.parse("2026-11-08"),
+                listOf(Metrics.VIEWS),
+                now,
+            )
+        }
+    }
+
+    @Test
+    fun postHistoryIsEachDaysLatestCaptureWithItsAge() {
+        seed()
+        val h = queries.postHistory(tiktok)
+        assertEquals(listOf(1000.0, 4000.0, 5000.0), h.map { it.value })
+        assertEquals(1.0, h.first().ageDays, 1e-9)
+    }
+
+    @Test
+    fun versusAverageComparesWithTheSamePlatformsOtherDay7Posts() {
+        seed()
+        val other = Fixtures.post(TIKTOK, "tt-2", published + 1.days)
+        repo.upsertPosts(listOf(other), published)
+        repo.insertSnapshots(
+            listOf(
+                snap(TIKTOK, "tt-2", other.publishedAt + 7.days + 1.hours, mapOf("views" to 2000.0, "shares" to 2.0)),
+            ),
+        )
+        val v = queries.versusAverage(tiktok, now).associateBy { it.measure }
+        assertEquals(4000.0, v.getValue(Day7Measure.VIEWS).value)
+        assertEquals(2000.0, v.getValue(Day7Measure.VIEWS).average.value)
+        assertEquals(1.0, v.getValue(Day7Measure.VIEWS).average.inputs["posts"])
+        assertEquals(1.0, v.getValue(Day7Measure.SHARES_PER_1K).average.value)
+        assertTrue(Day7Measure.FOLLOWERS_PER_1K !in v, "TikTok doesn't report followers per post")
+        val yt = queries.versusAverage(short, now).associateBy { it.measure }
+        assertNull(yt.getValue(Day7Measure.VIEWS).average.value, "no other YouTube post: no average, never 0")
+        assertNotNull(yt.getValue(Day7Measure.VIEWS).average.missingReason)
     }
 }
