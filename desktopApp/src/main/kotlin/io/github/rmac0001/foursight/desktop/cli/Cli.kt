@@ -26,7 +26,7 @@ import io.github.rmac0001.foursight.core.query.videoStats
 import io.github.rmac0001.foursight.core.query.videos
 import io.github.rmac0001.foursight.core.sync.MatchEvents
 import io.github.rmac0001.foursight.desktop.DesktopServices
-import io.github.rmac0001.foursight.desktop.auth.LoopbackReceiver
+import io.github.rmac0001.foursight.desktop.auth.signIn
 import io.github.rmac0001.foursight.desktop.mcp.FourSightMcp
 import io.github.rmac0001.foursight.desktop.obsidian.NoteOutcome
 import io.github.rmac0001.foursight.desktop.obsidian.ObsidianSettings
@@ -440,16 +440,7 @@ class Cli(
         s: DesktopServices,
         now: Instant,
     ) {
-        if (!s.driveConnected) {
-            err.println("Saved on this PC. Drive isn't connected, so it syncs once you run: foursight connect drive")
-            return
-        }
-        runCatching { runBlocking { s.sync.publishEvents(now.toLocalDateTime(s.timeZone).date) } }
-            .onFailure {
-                err.println(
-                    "Saved on this PC; the Drive upload failed (${it::class.simpleName}). It retries next time.",
-                )
-            }
+        runBlocking { s.publishEvents(now) }?.let { err.println(it) }
     }
 
     private fun parseRef(text: String): PostRef {
@@ -469,53 +460,8 @@ class Cli(
         args: List<String>,
     ): Int {
         val name = args.singleOrNull()?.lowercase() ?: return usage(2)
-        val flow =
-            services.signInFlows[name] ?: run {
-                val known = services.signInFlows.keys.joinToString()
-                err.println("Can't sign in to \"$name\" yet. Available: $known")
-                return 1
-            }
-        return LoopbackReceiver(flow.loopbackPath, flow.loopbackHost, flow.loopbackRedirectSuffix).use { receiver ->
-            try {
-                val request = flow.begin(receiver.redirectUri)
-                out.println("Opening ${flow.displayName} sign-in in your browser...")
-                val opened =
-                    runCatching {
-                        Desktop.isDesktopSupported() &&
-                            Desktop.getDesktop().isSupported(Desktop.Action.BROWSE) &&
-                            Desktop.getDesktop().browse(URI(request.authorizeUrl)).let { true }
-                    }.getOrDefault(false)
-                if (!opened) out.println("Open this address in your browser:\n${request.authorizeUrl}")
-                out.println("Waiting for the sign-in to finish (up to 5 minutes)...")
-                val callback = runBlocking { receiver.await(5.minutes) }
-                val result = runBlocking { flow.complete(request, callback, Clock.System.now()) }
-                flow.platform?.let { services.repo.setTokenExpiry(it, result.signInExpiresAt) }
-                out.println(
-                    "Signed in to ${flow.displayName}. Granted: ${result.grantedScopes.sorted().joinToString()}",
-                )
-                if (result.missingScopes.isNotEmpty()) {
-                    err.println(
-                        "Not granted: ${result.missingScopes.sorted().joinToString()}. " +
-                            "Some numbers will be missing; run connect again and allow every permission.",
-                    )
-                }
-                result.signInExpiresAt?.let {
-                    out.println(
-                        "This sign-in lasts until $it unless it's renewed by collecting.",
-                    )
-                }
-                0
-            } catch (e: TimeoutCancellationException) {
-                err.println("Timed out waiting for the browser. Run connect again.")
-                1
-            } catch (e: SignInException) {
-                err.println(e.message)
-                1
-            } catch (e: CollectionException) {
-                err.println("${e.message}\n${e.kind.advice}")
-                1
-            }
-        }
+        val ok = runBlocking { signIn(services, name, { out.println(it) }, { err.println(it) }) }
+        return if (ok) 0 else 1
     }
 
     private fun collect(

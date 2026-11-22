@@ -30,6 +30,7 @@ import io.ktor.client.engine.java.Java
 import io.ktor.client.plugins.HttpTimeout
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 
 /**
@@ -101,6 +102,22 @@ class DesktopServices(
      * when the vault is set up; a vault problem never fails the collection.
      */
     fun afterCollection(now: kotlin.time.Instant): WriteReport? = obsidian()?.writeAll(now)
+
+    /**
+     * Publishes this device's events for the day to Drive. Returns a note to show when they stay
+     * local (Drive not connected, or the upload failed); null when they were published.
+     */
+    suspend fun publishEvents(now: kotlin.time.Instant): String? {
+        if (!driveConnected) return "Saved on this PC. Drive isn't connected, so it syncs once Drive is signed in."
+        return try {
+            sync.publishEvents(now.toLocalDateTime(timeZone).date)
+            null
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            "Saved on this PC; the Drive upload failed (${e::class.simpleName}). It retries next time."
+        }
+    }
 
     override fun close() = http.close()
 }

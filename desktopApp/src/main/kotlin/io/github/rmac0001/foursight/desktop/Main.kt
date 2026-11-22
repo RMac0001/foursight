@@ -1,7 +1,9 @@
 package io.github.rmac0001.foursight.desktop
 
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
 import io.github.rmac0001.foursight.desktop.cli.Cli
 import io.github.rmac0001.foursight.ui.App
 import java.io.File
@@ -38,9 +40,19 @@ fun main(args: Array<String>) {
         }
         exitProcess(Cli().run(list))
     }
+    // Closing the window quits (Roger's decision, November 22, 2026): the scheduled tasks collect
+    // without the app open, so there's no tray icon.
+    val services = DesktopServices()
     application {
-        Window(onCloseRequest = ::exitApplication, title = "FourSight") {
-            App()
+        Window(
+            onCloseRequest = {
+                services.close()
+                exitApplication()
+            },
+            title = "FourSight",
+            state = rememberWindowState(width = 1280.dp, height = 860.dp),
+        ) {
+            App(DesktopAppServices(services))
         }
     }
 }

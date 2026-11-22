@@ -13,7 +13,7 @@ step forward.
 | 3. Collectors | Done except Instagram's live check (no Reels on the linked account yet): TikTok, YouTube, Facebook, Drive publish, installed command and daily schedule verified live |
 | 4. CLI and MCP | Built and tested on branch `claude/step-4-cli-mcp`; audience added November 22, 2026; obsidian and post wait for steps 5 and 8. Connected to the Claude app |
 | 5. Obsidian writer | Built and tested on branch `claude/step-5-obsidian`; vault set on Roger's PC; waits for notes with post ids |
-| 6. Windows UI | Not started (placeholder shell with the six sections) |
+| 6. Windows UI | Built on branch `claude/step-6-windows-ui`: all six sections on real data; installed with desktop and Start menu shortcuts |
 | 7. Android | Not started (placeholder app showing the shared shell) |
 | 8. Posting | Not started |
 | 9. Hardening | Not started |
@@ -210,6 +210,41 @@ step forward.
 - **Tests:** 6 desktop tests on a throwaway vault: fields and block written, Roger's lines and
   other sections untouched, a second run changes nothing, notes without ids or day-7 numbers
   left alone, a hand-made Stats Overview never replaced, and CRLF notes keep their line endings.
+
+## Step 6: Windows UI (November 22, 2026)
+
+- **Shared screens in `ui/`** (Compose Multiplatform, so Android reuses them in step 7), reading
+  only the core query services through an `AppServices` interface; the Windows side
+  (`DesktopAppServices`) adds sign-in, the save dialog, opening links and the vault setting.
+- **Overview:** the spec's date filters (Today, Yesterday, Last 7, 28, 90, a custom range, all
+  history) and platform filters; followers per platform and summed; counts gained in the range,
+  summed only as counts; followers over time (one chart per platform) and views gained per day;
+  the best and weakest videos per platform. A range starting before collection did is labeled
+  partial, and charts start at the first capture instead of showing days before it as gaps.
+- **Platforms:** followers, every post with its latest counts and engagement rate, what the platform
+  doesn't report and why, its audience breakdowns as bars, and its limits.
+- **Content:** the library with search; match suggestions with a Confirm button (writes the same
+  events as `foursight match confirm`); a video page with latest or day-7 numbers per platform,
+  counts summed across platforms, views over time by days since publishing, the day-7 numbers
+  against the same platform's other posts (with the sample size), links to the posts, and a compare
+  view (differences, not causes).
+- **Posting:** says plainly it's step 8, with each platform's expected limit; no pending posts yet.
+- **Accounts:** each sign-in with its latest capture, last success and attempt, last error, sign-in
+  expiry and limits; Sign in (opens the browser, same flow as `foursight connect`) and Refresh now,
+  plus Refresh all. A refresh also runs the Obsidian writer, like the scheduled runs.
+- **Settings:** theme (match Windows, light, dark), the Obsidian vault, Drive status, JSON and CSV
+  export through a save dialog, and every metric's definition and source.
+- **Charts** are drawn in FourSight's own code (Roger's decision): gaps are dotted lines with a
+  hollow marker, and hovering or tapping shows the value, date, capture time and source.
+- **Roger's decisions (November 22, 2026):** charts drawn in-house; closing the window quits (no
+  tray icon, since the scheduled tasks collect without the app); shortcuts on the desktop and in the
+  Start menu, added by `scripts/install-windows.ps1` and removed by the uninstall script. The
+  install script now also stops a running FourSight window before replacing the files.
+- **New core queries:** `accountSummaryBetween` and `trendsBetween` (any range), `postHistory`,
+  and `versusAverage` (a post's day-7 numbers against the platform's other day-7 posts; averaged
+  within one platform only). 4 new tests.
+- **Checked on Roger's PC:** the installed app opens from its shortcut and shows Overview, Content
+  (list and a video page), and Accounts on the real database.
 
 ## To verify live
 

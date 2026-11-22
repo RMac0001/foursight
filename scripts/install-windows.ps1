@@ -7,6 +7,7 @@
 #   %USERPROFILE%\FourSight\bin    foursight.cmd, added to the user PATH
 #   %USERPROFILE%\FourSight\logs   output of the scheduled runs (no tokens or secrets)
 #   Task Scheduler \FourSight\      "Daily collection" at -DailyAt, and "Day-7 check" every hour
+#   FourSight.lnk on the desktop and in the Start menu, opening the app window
 # The database (%USERPROFILE%\FourSight\foursight.db) and Credential Manager entries are untouched.
 # Not under AppData: Windows hides a packaged app's AppData writes (the Claude app's) from other programs.
 # scripts\uninstall-windows.ps1 undoes all of it.
@@ -34,7 +35,7 @@ Write-Host "Installing to $app..."
 # A running FourSight (the MCP server the Claude app starts, or a scheduled run) holds the old jars
 # open, and removing the folder would fail halfway. Stop only processes running from this install;
 # the Claude app reconnects after it's restarted.
-$running = Get-CimInstance Win32_Process -Filter "Name='java.exe' OR Name='javaw.exe'" |
+$running = Get-CimInstance Win32_Process -Filter "Name='java.exe' OR Name='javaw.exe' OR Name='FourSight.exe'" |
     Where-Object { $_.CommandLine -like "*$app\*" }
 foreach ($p in $running) {
     Stop-Process -Id $p.ProcessId -Force -Confirm:$false
@@ -57,6 +58,18 @@ if ($parts -notcontains $bin) {
     [Environment]::SetEnvironmentVariable("Path", (($parts + $bin) -join ";"), "User")
     Write-Host "Added $bin to your user PATH (new terminals pick it up)."
 }
+
+# Shortcuts to the app window (Roger's choice, November 22, 2026: desktop and Start menu).
+$exe = Join-Path $app "FourSight.exe"
+$shell = New-Object -ComObject WScript.Shell
+foreach ($folder in [Environment]::GetFolderPath("Desktop"), [Environment]::GetFolderPath("Programs")) {
+    $link = $shell.CreateShortcut((Join-Path $folder "FourSight.lnk"))
+    $link.TargetPath = $exe
+    $link.WorkingDirectory = $app
+    $link.Description = "FourSight creator analytics"
+    $link.Save()
+}
+Write-Host "Added FourSight shortcuts to the desktop and the Start menu."
 
 if (-not $NoTasks) {
     # Windowless (javaw) so no console flashes up; output goes to the log.

@@ -94,6 +94,8 @@ data class PlatformSummary(
 
 data class AccountSummary(
     val period: Period,
+    /** How the range is described: "last 28 days", "all history", or the dates of a custom range. */
+    val label: String,
     val start: Instant?,
     val end: Instant,
     val platforms: List<PlatformSummary>,
@@ -105,6 +107,9 @@ data class AccountSummary(
     val definitionsVersion: Int,
 )
 
+/** Why a platform's gain is missing when it has no posts at all (not a missing number). */
+const val NO_POSTS_TO_COUNT = "No posts with captures to count."
+
 const val GAINED_DEFINITION =
     "Sum over the platform's posts of (latest capture − last capture at or before the period start). A post " +
         "published during the period starts from 0, because it had no views before it existed. A post with no " +
@@ -115,8 +120,20 @@ fun QueryService.accountSummary(
     period: Period,
     now: Instant,
     platforms: Set<SocialPlatform> = SocialPlatform.entries.toSet(),
+): AccountSummary = accountSummaryBetween(period.start(now), now, period.label, platforms, period)
+
+/**
+ * The summary for any range: [start] (null for all history) to [end]. Growth counts the change
+ * between the last capture at or before [start] and the last at or before [end].
+ */
+fun QueryService.accountSummaryBetween(
+    start: Instant?,
+    end: Instant,
+    label: String,
+    platforms: Set<SocialPlatform> = SocialPlatform.entries.toSet(),
+    period: Period = Period.ALL,
 ): AccountSummary {
-    val start = period.start(now)
+    val now = end
     val summaries = SocialPlatform.entries.filter { it in platforms }.map { platformSummary(it, start, now) }
     val firstCapture =
         SocialPlatform.entries
@@ -124,6 +141,7 @@ fun QueryService.accountSummary(
             .minOfOrNull { it.capturedAt }
     return AccountSummary(
         period = period,
+        label = label,
         start = start,
         end = now,
         platforms = summaries,
@@ -209,13 +227,13 @@ private fun QueryService.platformSummary(
                     missingReason =
                         when {
                             missing > 0 -> "$missing post(s) are missing ${m.label.lowercase()} in a capture."
-                            values.isEmpty() -> "No posts with captures to count."
+                            values.isEmpty() -> NO_POSTS_TO_COUNT
                             else -> null
                         },
                 )
             }
 
-    val inPeriod = posts.filter { start == null || it.publishedAt >= start }
+    val inPeriod = posts.filter { (start == null || it.publishedAt >= start) && it.publishedAt <= now }
     return PlatformSummary(
         platform = platform,
         followers = latestAccount?.value(Metrics.FOLLOWERS.id),

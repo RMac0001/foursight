@@ -76,6 +76,7 @@ Notes from the references:
 | `*_gained` | over a period, per platform: the sum over posts of (latest capture − last capture at or before the period start). A post published in the period starts from 0. A post with no capture before the start is left out and counted separately; nothing is estimated. Missing if a counted post lacks the value. |
 | trends | per platform and day, the day's latest capture from any device. Followers: the account's count. Post counts: the lifetime count summed over every post published before that day's capture; a day where such a post wasn't captured is a gap. Change: that day minus the day before. Counts only. |
 | ranking | each platform's posts with a day-7 lock, best two and weakest two. YouTube and Facebook by `followers_per_1k`; TikTok and Instagram by `shares_per_1k`, because they don't report followers per post (Roger's decision, November 22, 2026). Shown with the sample size and the posts not ranked yet. |
+| `*_average` (app) | a post's day-7 number against the mean of the same platform's other posts at their own day-7 captures, with the number of posts. Never averaged across platforms. |
 | match score | 0.5 × (1 − publish-time gap ÷ 48 hours) + 0.5 × caption word overlap (shared words ÷ all words, words of 3+ letters). Suggestions only: nothing links until Roger confirms. |
 
 ## Audience

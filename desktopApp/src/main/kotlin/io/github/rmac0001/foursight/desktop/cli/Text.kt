@@ -155,7 +155,7 @@ class Text(
 
     fun summary(s: AccountSummary): String =
         buildString {
-            appendLine("Summary, ${s.period.label}" + (s.start?.let { " (since ${time(it)})" } ?: ""))
+            appendLine("Summary, ${s.label}" + (s.start?.let { " (since ${time(it)})" } ?: ""))
             if (s.dataStartsAt != null && s.start != null && s.dataStartsAt!! > s.start!!) {
                 appendLine("Partial: collection started ${time(s.dataStartsAt)}, after the period start.")
             }
