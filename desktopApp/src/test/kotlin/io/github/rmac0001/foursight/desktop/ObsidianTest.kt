@@ -208,7 +208,8 @@ class ObsidianTest {
         )
         val r = writer.writeAll(now)
         assertEquals(listOf("Young"), r.notes.map { it.note.name })
-        assertEquals(NoteOutcome.NOT_DUE, r.notes.single().outcome)
+        assertEquals(NoteOutcome.NO_DAY7, r.notes.single().outcome)
+        assertEquals("TikTok not 7 days old", r.notes.single().detail)
         assertEquals("---\nstatus: idea\n---\n# Idea\n", plain.readText())
         assertEquals("---\ntiktok_id: 999\n---\n# Young\n", young.readText())
     }

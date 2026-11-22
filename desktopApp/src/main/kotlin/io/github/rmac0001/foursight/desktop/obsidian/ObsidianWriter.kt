@@ -60,7 +60,14 @@ data class VideoNote(
     val refs: List<PostRef>,
 )
 
-enum class NoteOutcome { WRITTEN, UNCHANGED, NOT_DUE, NO_POSTS_COLLECTED }
+enum class NoteOutcome(
+    val label: String,
+) {
+    WRITTEN("written"),
+    UNCHANGED("unchanged"),
+    NO_DAY7("no day-7 numbers"),
+    NO_POSTS_COLLECTED("not collected yet"),
+}
 
 data class NoteResult(
     val note: VideoNote,
@@ -125,7 +132,17 @@ class ObsidianWriter(
                 ?: return NoteResult(note, NoteOutcome.NO_POSTS_COLLECTED, "None of its ids are collected yet.")
         val missing = note.refs.filter { queries.findPost(it) == null }
         if (report.posts.none { it.result is Day7Result.Locked }) {
-            return NoteResult(note, NoteOutcome.NOT_DUE, "No platform has its day-7 numbers yet.")
+            val states =
+                report.posts.joinToString(", ") { d ->
+                    val state =
+                        when (d.result) {
+                            Day7Result.NotYetDue -> "not 7 days old"
+                            Day7Result.Pending -> "waiting for its day-7 capture"
+                            else -> "missed day 7 (no capture between day 7.0 and 8.0)"
+                        }
+                    "${SevenDayBlock.label(d.post.platform)} $state"
+                }
+            return NoteResult(note, NoteOutcome.NO_DAY7, states)
         }
         val before = note.path.readText()
         val after =

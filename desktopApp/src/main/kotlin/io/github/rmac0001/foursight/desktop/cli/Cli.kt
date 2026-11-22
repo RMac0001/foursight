@@ -592,7 +592,7 @@ class Cli(
             if (dry) out.println("Dry run: nothing written.")
             r.notes.forEach {
                 out.println(
-                    "${it.note.name}: ${it.outcome.name.lowercase().replace('_', ' ')}" +
+                    "${it.note.name}: ${it.outcome.label}" +
                         (it.detail?.let { d -> " ($d)" } ?: ""),
                 )
             }
@@ -616,7 +616,7 @@ class Cli(
                 }
         val r = writer.write(note, now, dry)
         out.println(
-            "${note.name}: ${r.outcome.name.lowercase().replace('_', ' ')}" + (r.detail?.let { " ($it)" } ?: ""),
+            "${note.name}: ${r.outcome.label}" + (r.detail?.let { " ($it)" } ?: ""),
         )
         if (!dry) out.println("Stats Overview: ${writer.writeOverview(writer.notes(), now)}")
         return 0
