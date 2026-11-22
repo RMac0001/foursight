@@ -12,15 +12,15 @@ updated: '2026-11-21'
 ---
 # FourSight: Spec
 
-> **Copy.** The master copy is Roger's vault note `Projects/Creator Stats/Creator Stats Plan.md`.
-> Copied into the repo on November 21, 2026. When the vault note changes, recopy it here; don't
-> edit this file on its own.
+> **Build-only copy.** The master is Roger's vault spec note. This copy leaves out the Setup
+> status section, account and app IDs and vault paths, because the repo is public. When the
+> master changes, recopy it here; don't edit this file on its own.
 
 *Roger's personal creator-analytics and posting app for One Fat Man's Journey. This note is the source of truth: Claude writes and maintains the spec here (with Roger's approval), and Claude Code builds from it. Replaces the November 21 Creator Stats plan. Last revised November 21, 2026.*
 
 ## Decisions locked
 
-- **Name:** FourSight. (Vault folder stays `Projects/Creator Stats/`.)
+- **Name:** FourSight.
 - **Personal use only.** One user: Roger. Metricool is the feature reference, never a vendor. No subscriptions, payments, multi-user features or public hosting.
 - **Kotlin Multiplatform + Compose Multiplatform.** One Kotlin codebase; Windows and Android share every screen.
 - **Same features on Windows and Android.** Windows-only extras: the CLI, the local MCP server and the Obsidian writer. Android-only extra: the home-screen widget.
@@ -31,7 +31,8 @@ updated: '2026-11-21'
 - **One v1, no phases.** Everything in this spec ships in v1. The build order below exists only because some pieces depend on others, and posting depends on platform reviews outside our control.
 - **No embedded AI.** Analysis by Claude happens through the MCP server. The app is fully useful without Claude.
 - **The channel comes first.** The first thing that must work end to end is replacing the Sunday browser review.
-- **Code lives in a private GitHub repo** (`foursight`). A copy of this spec goes in the repo as `docs/SPEC.md`, with `CLAUDE.md` pointing to it. This vault note stays the master copy.
+- **Code lives in a public GitHub repo** (`RMac0001/foursight`), public so GitHub Actions builds are free. A build-only copy of this spec goes in the repo as `docs/SPEC.md`, with `CLAUDE.md` pointing to it: everything Claude Code needs to build, but without the Setup status section, account and app IDs, or vault paths. This vault note stays the full master copy.
+- **Automated builds (GitHub Actions):** on every push, build and test the shared code, the Android app and the desktop app; on release tags, build the Windows installer too.
 - **Who does what:** Claude writes and maintains this spec and walks Roger through setup. Claude Code writes all the code, on Roger's PC.
 
 ---
@@ -82,7 +83,7 @@ foursight/
 Google Drive: /FourSight/
   snapshots/<device-id>/<platform>/<yyyy-mm-dd>.json   one file per device, platform and day
   events/<device-id>/<yyyy-mm-dd>.jsonl                append-only user edits
-  device-registry.json                                 device ids and names (written once per device)
+  devices/<device-id>.json                             one per device: its id and name (written once by that device)
 ```
 
 - **Snapshots:** every collection writes the raw API values with a capture timestamp, the device id and the metric definitions version.
@@ -134,7 +135,7 @@ Google Drive: /FourSight/
 - Per platform, the app shows whether posting is fully live or limited (private-only, drafts only, awaiting review) and never hides the limit.
 
 ### Obsidian writer (Windows)
-- After the day-7 lock, writes the `## 7-day numbers` block into the video note, updates the stats fields in its frontmatter (`views_tiktok`, `views_shorts`, `views_reels`, `views_instagram`, `followers_per_1k`...), and regenerates `Social Media Content/Stats Overview.md`.
+- After the day-7 lock, writes the `## 7-day numbers` block into the video note, updates the stats fields in its frontmatter (`views_tiktok`, `views_shorts`, `views_reels`, `views_instagram`, `followers_per_1k`...), and regenerates the vault's Stats Overview note.
 - It touches only the fields, the block and the one note it owns. Re-running it rewrites the same values.
 
 ### Android widget
@@ -168,6 +169,7 @@ Both run without the dashboard open, use the same database and query services, r
 | `export` | `foursight export --format json\|csv` | Export data (no secrets) |
 | `write_obsidian_stats` | `foursight obsidian <video>` | Write the 7-day block and fields to the vault |
 | `request_post` | `foursight post ...` | Creates a pending post; Roger confirms it in the app |
+| | `foursight connect <platform>` | Sign in to a platform (opens the browser) |
 | | `foursight collect` | The daily collection run (used by Task Scheduler) |
 
 **The MCP cannot:** publish without in-app confirmation, delete or edit posts, change account or app settings, modify stored metrics, or read tokens. It can only change local data through `refresh` (the normal collector) and the vault through `write_obsidian_stats`.
@@ -182,14 +184,6 @@ When this works, the Sunday scoreboard review switches from TikTok Studio in Chr
 2. **Google Cloud:** create a project; enable YouTube Data API v3, the YouTube Analytics API and the Google Drive API (scope `drive.file`); set up the OAuth consent screen and **publish it to production** (an external app left in "Testing" loses its sign-in after about 7 days); create two OAuth clients, Desktop and Android.
 3. **Meta for Developers:** create one app; add Facebook Login and the Instagram product (API with Facebook Login); request `pages_show_list`, `pages_read_engagement`, `read_insights`, `instagram_basic`, `instagram_manage_insights`, and for posting `pages_manage_posts`, `publish_video` and `instagram_content_publish` (confirm exact names when setting up); confirm Standard Access works for your own Page and Instagram account as the app's admin.
 
-## Setup status
-
-- [x] **TikTok** (November 21, 2026): app "FourSight" in Sandbox "FourSight Personal". Desktop platform, redirect `http://127.0.0.1:*/callback/`. Login Kit and Content Posting API (Direct Post on). Scopes: `user.info.basic`, `user.info.stats`, `video.list`, `video.upload`, `video.publish`. One Fat Man's Journey added as target user. Sandbox page (credentials are at the top): `https://developers.tiktok.com/app/7710700655085783060/sandbox/7710681147457488917`. Production draft not submitted (needs a demo video). Android platform to be added once the Android app exists.
-- [x] **Sign-in pages** (November 21, 2026): public repo `RMac0001/foursight-site` on GitHub Pages. Home `https://rmac0001.github.io/foursight-site/`, plus `privacy.html` and `terms.html`. TikTok URL-prefix verification file is in the repo; don't delete it.
-- [x] **Google Cloud** (November 21, 2026): project "FourSight" (`foursight-515420`). YouTube Data API v3 and YouTube Analytics API enabled. Consent screen: External, published to Production (unverified: first sign-in shows Google's "unverified app" warning; click Advanced, then Go to FourSight). Authorized domain `rmac0001.github.io`. Scopes: `youtube.readonly`, `yt-analytics.readonly`, `youtube.upload`, `drive.file`. Google Drive API enabled for sync. Desktop OAuth client "FourSight Windows" created; its JSON is in Roger's password manager. Android client to be created once the app's package name and signing SHA-1 exist.
-- [x] **Meta** (November 21, 2026): app "FourSight" (App ID `1874932726975528`), development mode, no business portfolio, Roger is admin. Use cases: "Manage everything on your Page" and "Manage messaging & content on Instagram" (API setup with Facebook login, which Meta now labels legacy but still supported). Permissions: `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `read_insights`, `instagram_basic`, `instagram_content_publish`, `instagram_manage_insights`, `business_management`. Facebook Login for Business configuration "FourSight Personal" (config ID `2568199267009624`, user access token). Windows sign-in: Meta allows `http://localhost` redirects automatically in development mode, so nothing needs registering. App secret (App settings → Basic) goes in Roger's password manager. Android: add the Android platform (package name and key hash) once the app exists.
-- [x] **Sync storage** (November 21, 2026): Google Drive, through the FourSight Google project above. No separate setup needed. Box was dropped: a "FourSight" app (ID 2941077) was created in the Box developer console, but its settings wouldn't save without a Box Developer account. That leftover Box app can be deleted.
-- Client keys and secrets live in Roger's password manager, never in this note or the repo.
 
 ## Build order (one v1, built in dependency order)
 
@@ -218,12 +212,13 @@ When this works, the Sunday scoreboard review switches from TikTok Studio in Chr
 - No scraping or unofficial sign-in workarounds without Roger's explicit approval.
 - No embedded AI, no server, no extra infrastructure, no commercial features.
 - Ask Roger before creating, changing or deleting files outside the repo (including the vault).
+- **The repo is public.** No secrets, tokens, client keys, account IDs or personal data in code, commits, test fixtures or build logs (Actions logs are public too). Recorded API responses used in tests must be scrubbed. Turn on GitHub secret scanning and push protection for the repo.
 - American English in all code comments, UI text and docs.
 
 ## Tabled ideas (not in v1, kept so they aren't forgotten)
 
 - **Best time to post** from Roger's own results (views and followers per 1,000 by posting hour and day).
-- **Calendar view** tied to the [[Chapter Plan]].
+- **Calendar view** tied to the Chapter Plan note.
 - **Comment reader:** YouTube, Facebook and Instagram comments in one list (TikTok Personal doesn't offer comments).
 - **Competitor tracking:** YouTube public channels only. TikTok's public-data API is for academic research, so it's out.
 
@@ -238,5 +233,5 @@ When this works, the Sunday scoreboard review switches from TikTok Studio in Chr
 ## Still open
 
 - [x] **Meta on Windows** (resolved November 21, 2026): Meta allows `http://localhost` redirects automatically while the app is in development mode.
-- [ ] **TikTok first sign-in:** confirm the Display API returns your stats in Sandbox.
+- [x] **TikTok first sign-in** (resolved November 22, 2026): in Sandbox, the sign-in granted `user.info.basic`, `user.info.stats` and `video.list`, and the first collection returned every public video with its views, likes, comments and shares, plus the follower count. The refresh token came back valid for 365 days (the docs say 180).
 - [ ] **Drive across devices:** confirm that files the Windows client creates under `drive.file` are visible to the Android client (both are clients of the same Google project). Test this before building the merge logic on it; if it fails, use one shared Drive folder that both clients open explicitly.
