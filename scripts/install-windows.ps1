@@ -31,6 +31,15 @@ $runtime = Join-Path $repo "desktopApp\build\cli-runtime\image"
 if (-not (Test-Path (Join-Path $runtime "bin\java.exe"))) { throw "The build made no command-line Java runtime at $runtime." }
 
 Write-Host "Installing to $app..."
+# A running FourSight (the MCP server the Claude app starts, or a scheduled run) holds the old jars
+# open, and removing the folder would fail halfway. Stop only processes running from this install;
+# the Claude app reconnects after it's restarted.
+$running = Get-CimInstance Win32_Process -Filter "Name='java.exe' OR Name='javaw.exe'" |
+    Where-Object { $_.CommandLine -like "*$app\*" }
+foreach ($p in $running) {
+    Stop-Process -Id $p.ProcessId -Force -Confirm:$false
+    Write-Host "Stopped a running FourSight (process $($p.ProcessId)). Restart the Claude app to reconnect it."
+}
 if (Test-Path $app) { Remove-Item $app -Recurse -Force }
 New-Item -ItemType Directory -Force $root, $bin, $logs | Out-Null
 Copy-Item $built $app -Recurse
