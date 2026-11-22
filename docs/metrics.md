@@ -78,6 +78,30 @@ Notes from the references:
 | ranking | each platform's posts with a day-7 lock, best two and weakest two. YouTube and Facebook by `followers_per_1k`; TikTok and Instagram by `shares_per_1k`, because they don't report followers per post (Roger's decision, November 22, 2026). Shown with the sample size and the posts not ranked yet. |
 | match score | 0.5 × (1 − publish-time gap ÷ 48 hours) + 0.5 × caption word overlap (shared words ÷ all words, words of 3+ letters). Suggestions only: nothing links until Roger confirms. |
 
+## Audience
+
+Stored as AUDIENCE snapshots, one per breakdown; each value is one group (an age band, a country, a
+traffic source). Checked live November 22, 2026.
+
+| Platform | Breakdown id | Unit | Window | Source |
+| --- | --- | --- | --- | --- |
+| YouTube | `viewer_age_gender` | percent of views | 28 days ending on the last Analytics day | `viewerPercentage` by `ageGroup`, `gender` |
+| YouTube | `traffic_source` | views | same | `views` by `insightTrafficSourceType` |
+| YouTube | `viewer_country` | views | same, top 25 | `views` by `country`, sorted by views |
+| Facebook | `follower_country` | followers | latest day Meta reports | `page_follows_country` |
+| Facebook | `follower_city` | followers | latest day Meta reports | `page_follows_city` |
+| Instagram | `follower_age` | followers | current followers | `follower_demographics`, breakdown `age` |
+| Instagram | `follower_gender` | followers | current followers | `follower_demographics`, breakdown `gender` |
+| Instagram | `follower_country` | followers | current followers | `follower_demographics`, breakdown `country` |
+
+- **Not available:** TikTok (no audience data for Personal accounts); Facebook follower age and
+  gender (retired March 14, 2024) and per-Reel audience (the API returns an error); traffic sources
+  on Facebook and Instagram.
+- **`share_of_listed`:** a group ÷ the sum of the groups listed × 100, for counts only. Platforms
+  list only their top groups and leave out people they can't place, so it isn't a share of every
+  follower or viewer.
+- YouTube describes viewers; Facebook and Instagram describe followers. They aren't combined.
+
 ## Day-7 lock
 
 - The day-7 number is the **first snapshot captured at least 7 × 24 hours after publishing**, and

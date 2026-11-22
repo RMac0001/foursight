@@ -31,7 +31,8 @@ object Exporter {
     ): List<Snapshot> =
         SocialPlatform.entries.filter { it in platforms }.flatMap { p ->
             queries.repo.posts(p).flatMap { queries.repo.snapshots(p, ItemKind.POST, it.postId) } +
-                queries.repo.accountSnapshots(p)
+                queries.repo.accountSnapshots(p) +
+                queries.repo.snapshotsOfKind(p, ItemKind.AUDIENCE)
         }
 
     fun json(

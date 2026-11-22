@@ -8,6 +8,7 @@ import io.github.rmac0001.foursight.core.query.Period
 import io.github.rmac0001.foursight.core.query.QueryJson
 import io.github.rmac0001.foursight.core.query.StatsBasis
 import io.github.rmac0001.foursight.core.query.accountSummary
+import io.github.rmac0001.foursight.core.query.audience
 import io.github.rmac0001.foursight.core.query.compare
 import io.github.rmac0001.foursight.core.query.latestSnapshot
 import io.github.rmac0001.foursight.core.query.recentSevenDayReports
@@ -290,6 +291,17 @@ class FourSightMcp(
                 val c = queries.compare(entry(args.string("a")), entry(args.string("b")), clock(), metrics)
                 QueryJson.comparison(c)
             },
+            ToolSpec(
+                "get_audience",
+                "Audience",
+                "Who watches or follows, where available: YouTube viewers by age and gender, views by traffic " +
+                    "source and by country (last 28 Analytics days); Facebook Page followers by country and city; " +
+                    "Instagram followers by age, gender and country. Each breakdown says its unit, time window and " +
+                    "capture time, and each platform lists what it doesn't provide (TikTok provides none).",
+                buildJsonObject { put("platforms", platformsProp) },
+                emptyList(),
+                readOnly = true,
+            ) { args -> QueryJson.audience(queries.audience(clock(), args.platforms())) },
             ToolSpec(
                 "get_freshness",
                 "Data freshness",

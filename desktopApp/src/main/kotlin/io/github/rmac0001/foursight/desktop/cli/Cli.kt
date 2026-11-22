@@ -16,6 +16,7 @@ import io.github.rmac0001.foursight.core.query.QueryJson
 import io.github.rmac0001.foursight.core.query.SevenDayBlock
 import io.github.rmac0001.foursight.core.query.StatsBasis
 import io.github.rmac0001.foursight.core.query.accountSummary
+import io.github.rmac0001.foursight.core.query.audience
 import io.github.rmac0001.foursight.core.query.compare
 import io.github.rmac0001.foursight.core.query.latestSnapshot
 import io.github.rmac0001.foursight.core.query.recentSevenDayReports
@@ -92,6 +93,10 @@ class Cli(
 
                 "status" -> {
                     withServices { status(it, rest) }
+                }
+
+                "audience" -> {
+                    withServices { audience(it, rest) }
                 }
 
                 "definitions" -> {
@@ -304,6 +309,20 @@ class Cli(
             json(QueryJson.encode(QueryJson.freshness(f)))
         } else {
             out.print(text(s).status(f))
+            0
+        }
+    }
+
+    private fun audience(
+        s: DesktopServices,
+        args: List<String>,
+    ): Int {
+        val a = Args.parse(args, valued = setOf("platform", "top"), switches = setOf("json"))
+        val r = s.queries.audience(clock(), a.platforms())
+        return if (a.flag("json")) {
+            json(QueryJson.encode(QueryJson.audience(r)))
+        } else {
+            out.print(text(s).audience(r, a.int("top", 10, 1..100)))
             0
         }
     }
@@ -532,6 +551,7 @@ class Cli(
               summary [--period 28d|all] [--platform <p>]    Followers, growth, best and weakest videos
               trends [--days 28] [--metric followers,views]  Day-by-day totals and changes
               compare <a> <b> [--metric views]               Two videos side by side
+              audience [--platform <p>] [--top 10]           Who watches or follows, and where views came from
               status                                         Last refresh, errors and limits per platform
               definitions                                    How every number is calculated
               export --format json|csv [--out <file>]        Everything stored (no secrets)

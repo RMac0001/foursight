@@ -8,6 +8,7 @@ import io.github.rmac0001.foursight.core.metrics.Metrics
 import io.github.rmac0001.foursight.core.model.ItemKind
 import io.github.rmac0001.foursight.core.model.PlatformPost
 import io.github.rmac0001.foursight.core.query.AccountSummary
+import io.github.rmac0001.foursight.core.query.AudienceReport
 import io.github.rmac0001.foursight.core.query.Format
 import io.github.rmac0001.foursight.core.query.LibraryEntry
 import io.github.rmac0001.foursight.core.query.MatchSuggestion
@@ -332,6 +333,33 @@ class Text(
             appendLine()
             appendLine("Computed numbers")
             QueryJson.computedDefinitions.forEach { (id, text) -> appendLine("  $id: $text") }
+        }
+
+    fun audience(
+        r: AudienceReport,
+        top: Int = 10,
+    ): String =
+        buildString {
+            r.platforms.forEach { p ->
+                appendLine(p.platform.displayName)
+                p.breakdowns.forEach { v ->
+                    appendLine("  ${v.breakdown.label} (${v.breakdown.unit}; ${v.breakdown.window})")
+                    if (v.missingReason != null) {
+                        appendLine("    ${v.missingReason}")
+                        return@forEach
+                    }
+                    appendLine("    Captured ${time(v.capturedAt)}")
+                    v.groups.take(top).forEach { g ->
+                        val value = Format.number(g.value, if (v.breakdown.unit.startsWith("percent")) 1 else 0)
+                        val share = g.shareOfListed?.let { "  (${Format.number(it, 1)}% of listed)" } ?: ""
+                        appendLine("    ${g.group.padEnd(28)} ${value.padStart(8)}$share")
+                    }
+                    if (v.groups.size > top) appendLine("    ... ${v.groups.size - top} more (use --json for all)")
+                }
+                p.notAvailable.forEach { appendLine("  n/a: $it") }
+                appendLine()
+            }
+            append(footer(r.generatedAt))
         }
 
     fun suggestions(

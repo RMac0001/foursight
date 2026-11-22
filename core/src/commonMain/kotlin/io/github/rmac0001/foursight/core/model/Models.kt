@@ -10,9 +10,12 @@ import kotlin.time.Instant
 @Serializable
 enum class ContentType { SHORT_FORM, LONG_FORM }
 
-/** What a snapshot describes: one post, or the whole account on that platform. */
+/**
+ * What a snapshot describes: one post, the whole account on that platform, or one audience
+ * breakdown (item id = the breakdown's id, see AudienceBreakdown).
+ */
 @Serializable
-enum class ItemKind { POST, ACCOUNT }
+enum class ItemKind { POST, ACCOUNT, AUDIENCE }
 
 /** One post on one platform. */
 data class PlatformPost(

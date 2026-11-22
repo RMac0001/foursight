@@ -146,6 +146,12 @@ class Repository(
     fun accountSnapshots(platform: SocialPlatform): List<Snapshot> =
         q.accountSnapshots(platform.name).executeAsList().map { it.toModel() }
 
+    /** Every snapshot of one kind on a platform, oldest first (used for audience breakdowns). */
+    fun snapshotsOfKind(
+        platform: SocialPlatform,
+        kind: ItemKind,
+    ): List<Snapshot> = q.snapshotsOfKind(platform.name, kind.name).executeAsList().map { it.toModel() }
+
     fun snapshotsForDeviceDay(
         deviceId: String,
         platform: SocialPlatform,

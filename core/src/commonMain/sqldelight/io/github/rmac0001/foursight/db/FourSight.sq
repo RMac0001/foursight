@@ -133,6 +133,9 @@ ORDER BY s.captured_at ASC;
 accountSnapshots:
 SELECT * FROM snapshot WHERE platform = ? AND item_kind = 'ACCOUNT' ORDER BY captured_at ASC;
 
+snapshotsOfKind:
+SELECT * FROM snapshot WHERE platform = ? AND item_kind = ? ORDER BY captured_at ASC;
+
 valuesForSnapshot:
 SELECT metric, value FROM snapshot_value WHERE snapshot_id = ?;
 
