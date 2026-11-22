@@ -4,9 +4,12 @@ Roger's personal creator-analytics and posting app for the One Fat Man's Journey
 Kotlin Multiplatform + Compose Multiplatform; one codebase for Windows and Android.
 
 **The spec is the source of truth: [`docs/SPEC.md`](docs/SPEC.md).** Read it before changing
-anything. It's a copy of the vault note `Projects/Creator Stats/Creator Stats Plan.md`, which
-stays the master; don't edit `docs/SPEC.md` on its own. `STATUS.md` tracks what's built, what's
-verified live and what still needs testing.
+anything. It's a build-only copy of Roger's vault spec note, which stays the master; don't edit
+`docs/SPEC.md` on its own. `STATUS.md` tracks what's built, what's verified live and what still
+needs testing.
+
+**The repo is public.** No secrets, account or app IDs, vault paths or personal data in code,
+commits, test fixtures or logs.
 
 ## Rules for Claude Code (from the spec)
 
