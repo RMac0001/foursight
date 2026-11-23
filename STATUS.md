@@ -278,6 +278,20 @@ step forward.
 - **Not yet:** the phone's own platform sign-ins and daily collection (part 2), the home-screen
   widget (part 3). The background sync's silent token refresh still needs a day on the phone to
   confirm.
+- **Paused November 22, 2026 (Roger: resume Saturday).** Part 2 had just started on branch
+  `claude/step-7-youtube` (one work-in-progress commit, not built or tested): a `GoogleTokenSource`
+  interface so the YouTube collector can take a token from the phone's AuthorizationClient. The plan
+  from there:
+  - YouTube on the phone: a second Google authorizer for `youtube.readonly` and
+    `yt-analytics.readonly`, a phone `CollectionRunner` that publishes to Drive, and collection in
+    the background worker. The Google Android client already exists, so there's nothing to register.
+  - Meta: register the Android key hash and use the Facebook SDK; Claude chat does the console step
+    from a brief.
+  - TikTok: an App Link verified on `rmac0001.github.io` and the TikTok console's Android platform;
+    Claude chat does the console step from a brief.
+  - Part 3: the Glance home-screen widget.
+- **Roger's preference:** console steps (Google, Meta, TikTok) go to Claude chat as a ready-to-paste
+  brief; he doesn't do them by hand.
 
 ## To verify live
 
