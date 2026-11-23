@@ -41,11 +41,21 @@ import kotlin.time.Instant
  *
  * The access token is cached in memory for the process and never stored.
  */
+/**
+ * Where a Google access token comes from: the Windows sign-in ([GoogleAuth], with a stored refresh
+ * token) or Google's Android AuthorizationClient (no stored refresh token). Collectors only need this.
+ */
+interface GoogleTokenSource {
+    /** A current access token; throws a CollectionException (NOT_CONNECTED) when there's no sign-in. */
+    suspend fun accessToken(now: Instant): String
+}
+
 class GoogleAuth(
     private val http: HttpClient,
     private val secrets: SecretStore,
     private val grant: GoogleGrant,
-) : SignInFlow {
+) : SignInFlow,
+    GoogleTokenSource {
     override val connection = grant.connection
     override val displayName = grant.displayName
     override val platform = grant.platform
@@ -107,7 +117,7 @@ class GoogleAuth(
     }
 
     /** A current access token, refreshed when it has under five minutes left. */
-    suspend fun accessToken(now: Instant): String =
+    override suspend fun accessToken(now: Instant): String =
         lock.withLock {
             cached?.let { (token, expires) -> if (expires - now > 5.minutes) return@withLock token }
             val refresh =

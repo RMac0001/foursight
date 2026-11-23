@@ -11,7 +11,7 @@ import io.github.rmac0001.foursight.core.model.ContentType
 import io.github.rmac0001.foursight.core.model.ItemKind
 import io.github.rmac0001.foursight.core.model.PlatformPost
 import io.github.rmac0001.foursight.core.model.Snapshot
-import io.github.rmac0001.foursight.core.platform.google.GoogleAuth
+import io.github.rmac0001.foursight.core.platform.google.GoogleTokenSource
 import io.github.rmac0001.foursight.core.platform.google.num
 import io.github.rmac0001.foursight.core.platform.google.obj
 import io.github.rmac0001.foursight.core.platform.google.str
@@ -38,7 +38,7 @@ import kotlin.time.Instant
  */
 class YouTubeCollector(
     private val api: YouTubeApi,
-    private val auth: GoogleAuth,
+    private val auth: GoogleTokenSource,
 ) : PlatformCollector {
     override val platform = SocialPlatform.YOUTUBE
 
