@@ -14,7 +14,7 @@ step forward.
 | 4. CLI and MCP | Built and tested on branch `claude/step-4-cli-mcp`; audience added November 22, 2026; obsidian and post wait for steps 5 and 8. Connected to the Claude app |
 | 5. Obsidian writer | Built and tested on branch `claude/step-5-obsidian`; vault set on Roger's PC; waits for notes with post ids |
 | 6. Windows UI | Built on branch `claude/step-6-windows-ui`: all six sections on real data; installed with desktop and Start menu shortcuts |
-| 7. Android | Not started (placeholder app showing the shared shell) |
+| 7. Android | Part 1 (the app with Drive sync) verified on Roger's phone; part 2 (phone sign-ins and collection) and part 3 (widget) next |
 | 8. Posting | Not started |
 | 9. Hardening | Not started |
 
@@ -260,6 +260,39 @@ step forward.
 - **Fonts** come from the PC's own font folder (Segoe UI, Segoe Fluent Icons, Cooper Black for the
   wordmark); nothing is bundled, and a missing font falls back to the default.
 
+## Step 7: Android (in progress)
+
+- **Roger's decisions (November 22, 2026):** sync first, then the phone's own sign-ins (YouTube, then
+  Meta, then TikTok), then the widget; his own release key; installs over USB.
+- **Release key:** kept outside the repo; its path and password are in Roger's user-level
+  `~/.gradle/gradle.properties` (`foursight.keystore`, `foursight.keystore.password`,
+  `foursight.key.alias`). Without them the release build is unsigned (CI). Its SHA-1 is registered
+  with Google's "FourSight Android" client (created November 22, 2026).
+- **Part 1, verified on Roger's Pixel 10 Pro XL (November 22, 2026):** the shared screens, with a
+  bottom tab bar on narrow screens; its own database; Google Drive through Google's Android
+  AuthorizationClient (`drive.file` only, no client ID, secret or refresh token on the phone);
+  merges the PC's files on launch, on demand (Accounts, "Sync from Drive") and twice a day with
+  WorkManager. The first sync read 9 files: 385 snapshots and 29 edits, and the phone showed the same
+  numbers as the PC. That settles the spec's open item: files one Google client creates under
+  `drive.file` are visible to the other client of the same project.
+- **Not yet:** the phone's own platform sign-ins and daily collection (part 2), the home-screen
+  widget (part 3). The background sync's silent token refresh still needs a day on the phone to
+  confirm.
+- **Paused November 22, 2026 (Roger: resume Saturday).** Part 2 had just started on branch
+  `claude/step-7-youtube` (one work-in-progress commit, not built or tested): a `GoogleTokenSource`
+  interface so the YouTube collector can take a token from the phone's AuthorizationClient. The plan
+  from there:
+  - YouTube on the phone: a second Google authorizer for `youtube.readonly` and
+    `yt-analytics.readonly`, a phone `CollectionRunner` that publishes to Drive, and collection in
+    the background worker. The Google Android client already exists, so there's nothing to register.
+  - Meta: register the Android key hash and use the Facebook SDK; Claude chat does the console step
+    from a brief.
+  - TikTok: an App Link verified on `rmac0001.github.io` and the TikTok console's Android platform;
+    Claude chat does the console step from a brief.
+  - Part 3: the Glance home-screen widget.
+- **Roger's preference:** console steps (Google, Meta, TikTok) go to Claude chat as a ready-to-paste
+  brief; he doesn't do them by hand.
+
 ## To verify live
 
 From the spec's "Still open" list; neither can be known until it's tested.
@@ -271,8 +304,8 @@ From the spec's "Still open" list; neither can be known until it's tested.
   with a `charset` parameter (`invalid_request`, "The request parameters are malformed"), and the
   refresh token came back valid for 365 days, not the 180 the docs state (FourSight stores what
   the response says). The vault note's "Still open" item can be ticked.
-- [ ] **Drive across devices:** files the Windows client creates under `drive.file` are visible
-  to the Android client. Test before building the merge logic on it.
+- [x] **Drive across devices** (verified November 22, 2026): the phone's first sync read the PC's
+  files (9 files, 385 snapshots, 29 edits).
 
 ## API details checked
 

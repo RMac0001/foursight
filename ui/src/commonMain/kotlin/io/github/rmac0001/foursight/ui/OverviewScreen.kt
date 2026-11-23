@@ -265,7 +265,8 @@ private fun OverviewBody(
                     "share a scale.",
         ) {
             // Two small charts per row.
-            data.trends.series.filter { it.metric == Metrics.FOLLOWERS }.chunked(2).forEach { pair ->
+            val perRow = if (LocalCompact.current) 1 else 2
+            data.trends.series.filter { it.metric == Metrics.FOLLOWERS }.chunked(perRow).forEach { pair ->
                 Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                     pair.forEach { series ->
                         Column(Modifier.weight(1f)) {
@@ -298,7 +299,7 @@ private fun OverviewBody(
                             }
                         }
                     }
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    if (pair.size == 1 && !LocalCompact.current) Spacer(Modifier.weight(1f))
                 }
             }
             Muted("Dotted line or hollow dot: a gap (no capture), never filled in.")

@@ -98,17 +98,30 @@ fun AccountsScreen(
 
     ScreenTitle("Accounts", "Sign-ins, last refresh, errors and limits for each connection.")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        PrimaryButton(
-            enabled = busy == null,
+        if (services.canCollect) {
+            PrimaryButton(
+                enabled = busy == null,
+                onClick = {
+                    busy = "Refreshing every platform..."
+                    scope.launch {
+                        messages = report(services.refresh(null))
+                        busy = null
+                        onChanged()
+                    }
+                },
+            ) { Text("Refresh all now") }
+        }
+        SecondaryButton(
+            enabled = busy == null && services.driveConnected,
             onClick = {
-                busy = "Refreshing every platform..."
+                busy = "Reading the other devices' files from Google Drive..."
                 scope.launch {
-                    messages = report(services.refresh(null))
+                    messages = listOf(services.syncNow())
                     busy = null
                     onChanged()
                 }
             },
-        ) { Text("Refresh all now") }
+        ) { Text("Sync from Drive") }
         busy?.let {
             CircularProgressIndicator(Modifier.width(20.dp))
             Muted(it)
@@ -191,21 +204,23 @@ fun SettingsScreen(
         Panel("Theme") { ChoiceChips(ThemeChoice.entries, theme, { it.label }, onTheme) }
 
         val vault = rememberLoaded(reload, message) { services.vaultStatus() }
-        LoadedView(vault) { v ->
-            var path by remember(v) { mutableStateOf(v?.vault.orEmpty()) }
-            Panel(
-                "Obsidian vault",
-                note =
-                    "FourSight writes the 7-day block and stats fields into video notes " +
-                        "with post ids, after each collection.",
-            ) {
-                OutlinedTextField(path, {
-                    path = it
-                }, label = { Text("Vault folder") }, singleLine = true, modifier = Modifier.width(520.dp))
-                PrimaryButton(onClick = { message = services.setVault(path.trim()) }) { Text("Save") }
-                if (v != null) {
-                    KeyValue("Video notes folder", v.notesFolder)
-                    KeyValue("Stats Overview note", v.overviewNote)
+        if (services.hasObsidian) {
+            LoadedView(vault) { v ->
+                var path by remember(v) { mutableStateOf(v?.vault.orEmpty()) }
+                Panel(
+                    "Obsidian vault",
+                    note =
+                        "FourSight writes the 7-day block and stats fields into video notes " +
+                            "with post ids, after each collection.",
+                ) {
+                    OutlinedTextField(path, {
+                        path = it
+                    }, label = { Text("Vault folder") }, singleLine = true, modifier = Modifier.width(520.dp))
+                    PrimaryButton(onClick = { message = services.setVault(path.trim()) }) { Text("Save") }
+                    if (v != null) {
+                        KeyValue("Video notes folder", v.notesFolder)
+                        KeyValue("Stats Overview note", v.overviewNote)
+                    }
                 }
             }
         }

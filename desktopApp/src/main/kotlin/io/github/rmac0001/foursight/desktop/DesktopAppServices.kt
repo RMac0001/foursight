@@ -153,6 +153,15 @@ class DesktopAppServices(
     override val driveConnected: Boolean get() = services.driveConnected
 
     override val fonts: BrandFonts by lazy { windowsFonts() }
+
+    override suspend fun syncNow(): String =
+        withContext(Dispatchers.IO) {
+            if (!services.driveConnected) return@withContext "Drive isn't connected. Sign in to Google Drive first."
+            val r = services.sync.merge()
+            "Read ${r.filesRead} new files from Drive: ${r.snapshotsAdded} snapshots and ${r.eventsAdded} " +
+                "edits added." +
+                if (r.errors.isEmpty()) "" else " Problems: ${r.errors.joinToString("; ")}"
+        }
 }
 
 /**

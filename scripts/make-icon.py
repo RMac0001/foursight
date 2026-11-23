@@ -1,5 +1,5 @@
 """Draws the FourSight icon (the Retro Sunset brand): a burnt-orange sun on dark brown, cut by four
-cream stripes, one per platform. Pure shapes, no fonts. Writes the PNG the window uses and the ICO
+stripes, one per platform. Pure shapes, no fonts. Writes the PNG the window uses and the ICO
 the Windows installer uses.
 
     python scripts/make-icon.py
@@ -39,6 +39,14 @@ def draw(size: int = SIZE) -> Image.Image:
     return img
 
 
+def draw_square(size: int) -> Image.Image:
+    """The mark on a full square (no rounded corners), for the round launcher icon's mask."""
+    img = draw(size)
+    bg = Image.new("RGBA", (size, size), BROWN)
+    bg.alpha_composite(img)
+    return bg
+
+
 def main() -> None:
     big = draw()
     out_png = root / "desktopApp" / "src" / "main" / "resources" / "foursight-icon.png"
@@ -47,7 +55,19 @@ def main() -> None:
     out_ico = root / "desktopApp" / "icons" / "foursight.ico"
     out_ico.parent.mkdir(parents=True, exist_ok=True)
     big.save(out_ico, sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-    print("wrote", out_png, "and", out_ico)
+    # Android launcher icons (legacy square and round), one per screen density.
+    res = root / "androidApp" / "src" / "main" / "res"
+    for density, px in {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}.items():
+        folder = res / f"mipmap-{density}"
+        folder.mkdir(parents=True, exist_ok=True)
+        icon = big.resize((px, px), Image.LANCZOS)
+        icon.save(folder / "ic_launcher.png")
+        mask = Image.new("L", (px, px), 0)
+        ImageDraw.Draw(mask).ellipse([0, 0, px - 1, px - 1], fill=255)
+        round_icon = Image.new("RGBA", (px, px), (0, 0, 0, 0))
+        round_icon.paste(draw_square(px), (0, 0), mask)
+        round_icon.save(folder / "ic_launcher_round.png")
+    print("wrote", out_png, out_ico, "and the Android launcher icons")
 
 
 if __name__ == "__main__":
